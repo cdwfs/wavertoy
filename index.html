@@ -1,0 +1,138 @@
+<!doctype html>
+<head>
+	<title>Wavertoy</title>
+	<style type="text/css" media="screen">
+    #editor {
+        margin: 0;
+        position: relative !important;
+		width: 90%;
+		height: 300px;
+    }
+	</style>
+</head>
+<body>
+
+	<pre id="editor" style="font-size:18px">
+// Generate samples based on the "time" parameter.
+var sample = sin(6.2831 * 220.0 * time);
+// Store final sample values in the "left" and "right" variables.
+left = sample;
+right = sample;</pre>
+
+	<script src="lib/src-min-noconflict/ace.js" charset="utf-8"></script>
+	<script>
+	var editor = ace.edit("editor");
+	editor.setTheme("ace/theme/xcode");
+	editor.getSession().setMode("ace/mode/javascript");
+    editor.commands.addCommand({
+        name: "runSound",
+        bindKey: {win: "Ctrl-Enter", mac: "Command-Enter"},
+        exec: function(editor) {
+			console.log("running!");
+			waver.start();
+        }
+    });
+    editor.commands.addCommand({
+        name: "stopSound",
+        bindKey: {win: "Ctrl-Space", mac: "Command-Space"},
+        exec: function(editor) {
+			console.log("stopping!");
+			waver.stop();
+        }
+    });
+	// add command to lazy-load keybinding_menu extension
+    editor.commands.addCommand({
+        name: "showKeyboardShortcuts",
+        bindKey: {win: "Ctrl-Alt-h", mac: "Command-Alt-h"},
+        exec: function(editor) {
+			console.log("helping!");
+            ace.config.loadModule("ace/ext/keybinding_menu", function(module) {
+                module.init(editor);
+                editor.showKeyboardShortcuts()
+            })
+        }
+    });
+	</script>
+	
+	<script>
+	var waver = function() {
+		"use strict";
+		var audioCtx = new AudioContext();
+		var scriptNode = audioCtx.createScriptProcessor(512, 0, 2);
+		var elapsedTime = 0;
+		var secondsPerSample = 1.0 / audioCtx.sampleRate;
+		var peakAmplitude = 0.2;
+		
+		var sampleGen = function(time) { return [0,0] };
+		var updateCode = function() {
+			sampleGen = new Function('time',
+				'"use strict";\n'
+					//+ 'try {\n'
+					+ 'var left = 0;\n'
+					+ 'var right = 0;\n'
+					+ 'var sin = function(x) { return Math.sin(x); };\n'
+					+ 'var cos = function(x) { return Math.cos(x); };\n'
+					+ 'var tan = function(x) { return Math.tan(x); };\n'
+					+ 'var exp = function(x) { return Math.exp(x); };\n'
+					+ 'var fract = function(x) { return x - Math.floor(x); };\n'
+					+ editor.getValue()
+					+ 'return [left,right];\n'
+					//+ '} catch(e) { alert(e.message); }\n'
+			);
+		};
+		scriptNode.onaudioprocess = function(audioProcessingEvent) {
+			var outputBuffer = audioProcessingEvent.outputBuffer;
+			var leftChan  = outputBuffer.getChannelData(0);
+			var rightChan = outputBuffer.getChannelData(1);
+			for (var iSamp=0; iSamp<this.bufferSize; iSamp += 1) {
+				var samples = sampleGen(elapsedTime);
+				leftChan[iSamp] = samples[0] * peakAmplitude;
+				rightChan[iSamp] = samples[1] * peakAmplitude;
+				elapsedTime += secondsPerSample;
+			}
+		};
+		
+		return {
+			"start": function() {
+				var oldFunc = sampleGen;
+				try {
+					updateCode();
+				} catch(e) {
+					alert(e.name + "\n" + e.message);
+					sampleGen = oldFunc;
+				}
+				scriptNode.connect(audioCtx.destination); this.reset();
+			},
+			"stop": function() { scriptNode.disconnect(); },
+			"reset": function() { elapsedTime = 0.0; }
+		};
+	}();
+	</script>
+	
+	<form name="soundCode"> 
+		<input type="button" value="Run (ctrl-Enter)" onClick="waver.start();"/>
+		<input type="button" value="Stop (ctrl-Space)" onClick="waver.stop();"/>
+	</form>
+
+	<H2>Example:</H2>
+	<pre>
+var p = 10*sin(time) * sin(6.2831 * 220.0 * time);
+var sample = sin(6.2831 * 220.0 * time + p) * exp(-4.0*fract(4*time));
+
+sample += sin(100 * time * exp(-10 * fract(2*time)));
+
+left = sample;
+right = sample;
+	</pre>
+
+	<H2>TODO:</H2>
+	<UL>
+		<LI>Documentation</LI>
+		<LI>UI controls for:<UL>
+			<LI>Gain</LI>
+			<LI>Audio buffer size</LI>
+		</UL></LI>
+		<LI>Error reporting (syntax error, failure to set left/right, etc.)</LI>
+	</UL>
+		
+</body>
