@@ -55,11 +55,16 @@ right = sample;</pre>
     });
 	</script>
 	
+	<!-- Audio generator -->
 	<script>
 	var waver = function() {
 		"use strict";
 		var audioCtx = new AudioContext();
-		var scriptNode = audioCtx.createScriptProcessor(512, 0, 2);
+		var sampleBufferSize = 1024;
+		var inputChannelCount = 0;
+		var outputChannelCount = 2;
+		var scriptNode = audioCtx.createScriptProcessor(sampleBufferSize,
+			inputChannelCount, outputChannelCount);
 		var elapsedTime = 0;
 		var secondsPerSample = 1.0 / audioCtx.sampleRate;
 		var peakAmplitude = 0.2;
