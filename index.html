@@ -22,6 +22,7 @@ right = sample;</pre>
 	<script src="lib/src-min-noconflict/ace.js" charset="utf-8"></script>
 	<script>
 	var editor = ace.edit("editor");
+	editor.$blockScrolling = Infinity;
 	editor.setTheme("ace/theme/xcode");
 	editor.getSession().setMode("ace/mode/javascript");
     editor.commands.addCommand({
