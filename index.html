@@ -30,7 +30,7 @@ right = sample;</pre>
         name: "runSound",
         bindKey: {win: "Ctrl-Enter", mac: "Command-Enter"},
         exec: function(editor) {
-			console.log("running!");
+			//console.log("running!");
 			waver.start();
         }
     });
@@ -38,7 +38,7 @@ right = sample;</pre>
         name: "stopSound",
         bindKey: {win: "Ctrl-Space", mac: "Command-Space"},
         exec: function(editor) {
-			console.log("stopping!");
+			//console.log("stopping!");
 			waver.stop();
         }
     });
@@ -73,6 +73,7 @@ right = sample;</pre>
 		var elapsedTime = 0;
 		var secondsPerSample = 1.0 / audioCtx.sampleRate;
 		var peakAmplitude = 0.2;
+		var isRunning = false;
 		
 		var sampleGen = function(time) { return [0,0] };
 		var updateCode = function() {
@@ -113,9 +114,11 @@ right = sample;</pre>
 					sampleGen = oldFunc;
 				}
 				scriptNode.connect(audioCtx.destination); this.reset();
+				isRunning = true;
 			},
-			"stop": function() { scriptNode.disconnect(); },
+			"stop": function() { scriptNode.disconnect(); isRunning = false; },
 			"reset": function() { elapsedTime = 0.0; },
+			"isRunning": function() { return isRunning; },
 			"getBufferSize": function() { return scriptNode.bufferSize; },
 			"getSamples": function() { return samplesCopy; }
 		};
@@ -209,10 +212,17 @@ right = sample;
 			var iVert;
 			var vertsL = waveLObj.geometry.vertices;
 			var vertsR = waveRObj.geometry.vertices;
-			var samples = waver.getSamples();
-			for(iVert=0; iVert < vertsL.length; iVert += 1) {
-				vertsL[iVert].y = samples.left[iVert];
-				vertsR[iVert].y = samples.right[iVert];
+			if (waver.isRunning()) {
+				var samples = waver.getSamples();
+				for(iVert=0; iVert < vertsL.length; iVert += 1) {
+					vertsL[iVert].y = samples.left[iVert];
+					vertsR[iVert].y = samples.right[iVert];
+				}
+			} else {
+				for(iVert=0; iVert < vertsL.length; iVert += 1) {
+					vertsL[iVert].y *= 0.5;
+					vertsR[iVert].y *= 0.5;
+				}
 			}
 			waveLObj.geometry.verticesNeedUpdate = true;
 			waveRObj.geometry.verticesNeedUpdate = true;
