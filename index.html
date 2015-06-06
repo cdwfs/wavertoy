@@ -60,73 +60,78 @@ right = sample;</pre>
 	<script>
 	var waver = function() {
 		"use strict";
-		var audioCtx = new AudioContext();
-		var sampleBufferSize = 1024;
-		var inputChannelCount = 0;
-		var outputChannelCount = 2;
-		var scriptNode = audioCtx.createScriptProcessor(sampleBufferSize,
-			inputChannelCount, outputChannelCount);
-		var samplesCopy = {
-			left: new Float32Array(sampleBufferSize),
-			right: new Float32Array(sampleBufferSize)
-		};
-		var elapsedTime = 0;
-		var secondsPerSample = 1.0 / audioCtx.sampleRate;
-		var peakAmplitude = 0.2;
-		var isRunning = false;
-		
-		var sampleGen = function(time) { return [0,0] };
-		var updateCode = function() {
-			sampleGen = new Function('time',
-				'"use strict";\n'
+		var m_elapsedTime, m_scriptNode, m_isRunning, m_sampleGen, m_audioCtx, m_updateCode;
+		var m_samplesCopy;
+		function init() {
+			m_audioCtx = new AudioContext();
+			var sampleBufferSize = 1024;
+			var inputChannelCount = 0;
+			var outputChannelCount = 2;
+			m_scriptNode = m_audioCtx.createScriptProcessor(sampleBufferSize,
+				inputChannelCount, outputChannelCount);
+			m_samplesCopy = {
+				left: new Float32Array(sampleBufferSize),
+				right: new Float32Array(sampleBufferSize)
+			};
+			var secondsPerSample = 1.0 / m_audioCtx.sampleRate;
+			m_isRunning = false;
+			m_elapsedTime = 0;
+			
+			m_sampleGen = function(time) { return [0,0] };
+			m_updateCode = function() {
+				m_sampleGen = new Function('time',
+					'"use strict";\n'
 					//+ 'try {\n'
-					+ 'var left = 0;\n'
-					+ 'var right = 0;\n'
 					+ 'var sin = function(x) { return Math.sin(x); };\n'
 					+ 'var cos = function(x) { return Math.cos(x); };\n'
 					+ 'var tan = function(x) { return Math.tan(x); };\n'
 					+ 'var exp = function(x) { return Math.exp(x); };\n'
 					+ 'var fract = function(x) { return x - Math.floor(x); };\n'
-					+ editor.getValue()
-					+ 'return [left,right];\n'
+						+ 'var left = 0;\n'
+						+ 'var right = 0;\n'
+						+ editor.getValue()
+						+ 'return [left,right];\n'
 					//+ '} catch(e) { alert(e.message); }\n'
-			);
-		};
-		scriptNode.onaudioprocess = function(audioProcessingEvent) {
-			var outputBuffer = audioProcessingEvent.outputBuffer;
-			var leftChan  = outputBuffer.getChannelData(0);
-			var rightChan = outputBuffer.getChannelData(1);
-			for (var iSamp=0; iSamp<this.bufferSize; iSamp += 1) {
-				var samples = sampleGen(elapsedTime);
-				samplesCopy.left[iSamp] = leftChan[iSamp] = samples[0] * peakAmplitude;
-				samplesCopy.right[iSamp] = rightChan[iSamp] = samples[1] * peakAmplitude;
-				elapsedTime += secondsPerSample;
-			}
-		};
-		
+				);
+			};
+			m_scriptNode.onaudioprocess = function(audioProcessingEvent) {
+				var outputBuffer = audioProcessingEvent.outputBuffer;
+				var leftChan  = outputBuffer.getChannelData(0);
+				var rightChan = outputBuffer.getChannelData(1);
+				var gain = document.getElementsByName("gainSlider")[0].value * 0.01;
+				for (var iSamp=0; iSamp<this.bufferSize; iSamp += 1) {
+					var samples = m_sampleGen(m_elapsedTime);
+				m_samplesCopy.left[iSamp] = leftChan[iSamp] = samples[0] * gain;
+					m_samplesCopy.right[iSamp] = rightChan[iSamp] = samples[1] * gain;
+					m_elapsedTime += secondsPerSample;
+				}
+			};
+		}
+		init();
 		return {
 			"start": function() {
-				var oldFunc = sampleGen;
+				var oldFunc = m_sampleGen;
 				try {
-					updateCode();
+					m_updateCode();
 				} catch(e) {
 					alert(e.name + "\n" + e.message);
-					sampleGen = oldFunc;
+					m_sampleGen = oldFunc;
 				}
-				scriptNode.connect(audioCtx.destination); this.reset();
-				isRunning = true;
+				m_scriptNode.connect(m_audioCtx.destination); this.reset();
+				m_isRunning = true;
 			},
-			"stop": function() { scriptNode.disconnect(); isRunning = false; },
-			"reset": function() { elapsedTime = 0.0; },
-			"isRunning": function() { return isRunning; },
-			"getBufferSize": function() { return scriptNode.bufferSize; },
-			"getSamples": function() { return samplesCopy; }
+			"stop": function() { m_scriptNode.disconnect(); m_isRunning = false; },
+			"reset": function() { m_elapsedTime = 0.0; },
+			"isRunning": function() { return m_isRunning; },
+			"getBufferSize": function() { return m_scriptNode.bufferSize; },
+			"getSamples": function() { return m_samplesCopy; }
 		};
 	}();
 	</script>
 	<form name="soundCode"> 
 		<input type="button" value="Run (ctrl-Enter)" onClick="waver.start();"/>
 		<input type="button" value="Stop (ctrl-Space)" onClick="waver.stop();"/>
+		Gain: <input type="range" min="0" max="100" value="50" name="gainSlider"/>
 	</form>
 	<H2>Example:</H2>
 	<pre>
@@ -143,7 +148,6 @@ right = sample;
 	<UL>
 		<LI>Documentation</LI>
 		<LI>UI controls for:<UL>
-			<LI>Gain</LI>
 			<LI>Audio buffer size</LI>
 		</UL></LI>
 		<LI>Error reporting (syntax error, failure to set left/right, etc.)</LI>
