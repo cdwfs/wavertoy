@@ -58,79 +58,113 @@ right = sample;</pre>
 	
 	<!-- Audio generator -->
 	<script>
+	var abs   = function(x) { return Math.abs(x);   };
+	var sign  = function(x) { return Math.sign(x);  };
+	var sqrt  = function(x) { return Math.sqrt(x);  };
+	var cbrt  = function(x) { return Math.cbrt(x);  };
+	var min   = function(x) { return Math.min(x);   };
+	var max   = function(x) { return Math.max(x);   };
+	var ceil  = function(x) { return Math.ceil(x);  };
+	var floor = function(x) { return Math.floor(x); };
+	var trunc = function(x) { return Math.trunc(x); };
+	var fract = function(x) { return x-Math.floor(x); };
+	var log   = function(x) { return Math.log(x);   };
+	var log10 = function(x) { return Math.log10(x); };
+	var exp   = function(x) { return Math.exp(x);   };
+	var pow   = function(x) { return Math.pow(x);   }
+	var sin   = function(x) { return Math.sin(x);   };
+	var cos   = function(x) { return Math.cos(x);   };
+	var tan   = function(x) { return Math.tan(x);   };
+	var asin  = function(x) { return Math.asin(x);  };
+	var acos  = function(x) { return Math.acos(x);  };
+	var atan  = function(x) { return Math.atan(x);  };
+	var atan2 = function(y,x) { return Math.atan2(y,x); };
+	var PI = Math.PI;
 	var waver = function() {
 		"use strict";
-		var audioCtx = new AudioContext();
-		var sampleBufferSize = 1024;
-		var inputChannelCount = 0;
-		var outputChannelCount = 2;
-		var scriptNode = audioCtx.createScriptProcessor(sampleBufferSize,
-			inputChannelCount, outputChannelCount);
-		var samplesCopy = {
-			left: new Float32Array(sampleBufferSize),
-			right: new Float32Array(sampleBufferSize)
-		};
-		var elapsedTime = 0;
-		var secondsPerSample = 1.0 / audioCtx.sampleRate;
-		var peakAmplitude = 0.2;
-		var isRunning = false;
-		
-		var sampleGen = function(time) { return [0,0] };
-		var updateCode = function() {
-			sampleGen = new Function('time',
-				'"use strict";\n'
+		var m_elapsedTime, m_scriptNode, m_isRunning, m_sampleGen, m_audioCtx, m_updateCode;
+		var m_samplesCopy;
+		function init() {
+			m_audioCtx = new AudioContext();
+			var sampleBufferSize = 1024;
+			var inputChannelCount = 0;
+			var outputChannelCount = 2;
+			m_scriptNode = m_audioCtx.createScriptProcessor(sampleBufferSize,
+				inputChannelCount, outputChannelCount);
+			m_samplesCopy = {
+				left: new Float32Array(sampleBufferSize),
+				right: new Float32Array(sampleBufferSize)
+			};
+			var secondsPerSample = 1.0 / m_audioCtx.sampleRate;
+			m_isRunning = false;
+			m_elapsedTime = 0;
+			
+			m_sampleGen = function(time) { return [0,0] };
+			m_updateCode = function() {
+				m_sampleGen = new Function('time',
+					'"use strict";\n'
 					//+ 'try {\n'
-					+ 'var left = 0;\n'
-					+ 'var right = 0;\n'
-					+ 'var sin = function(x) { return Math.sin(x); };\n'
-					+ 'var cos = function(x) { return Math.cos(x); };\n'
-					+ 'var tan = function(x) { return Math.tan(x); };\n'
-					+ 'var exp = function(x) { return Math.exp(x); };\n'
-					+ 'var fract = function(x) { return x - Math.floor(x); };\n'
-					+ editor.getValue()
-					+ 'return [left,right];\n'
+						+ 'var left = 0;\n'
+						+ 'var right = 0;\n'
+						+ editor.getValue()
+						+ 'return [left,right];\n'
 					//+ '} catch(e) { alert(e.message); }\n'
-			);
-		};
-		scriptNode.onaudioprocess = function(audioProcessingEvent) {
-			var outputBuffer = audioProcessingEvent.outputBuffer;
-			var leftChan  = outputBuffer.getChannelData(0);
-			var rightChan = outputBuffer.getChannelData(1);
-			for (var iSamp=0; iSamp<this.bufferSize; iSamp += 1) {
-				var samples = sampleGen(elapsedTime);
-				samplesCopy.left[iSamp] = leftChan[iSamp] = samples[0] * peakAmplitude;
-				samplesCopy.right[iSamp] = rightChan[iSamp] = samples[1] * peakAmplitude;
-				elapsedTime += secondsPerSample;
-			}
-		};
-		
+				);
+			};
+			m_scriptNode.onaudioprocess = function(audioProcessingEvent) {
+				var outputBuffer = audioProcessingEvent.outputBuffer;
+				var leftChan  = outputBuffer.getChannelData(0);
+				var rightChan = outputBuffer.getChannelData(1);
+				var gain = document.getElementsByName("gainSlider")[0].value * 0.01;
+				for (var iSamp=0; iSamp<this.bufferSize; iSamp += 1) {
+					var samples = m_sampleGen(m_elapsedTime);
+				m_samplesCopy.left[iSamp] = leftChan[iSamp] = samples[0] * gain;
+					m_samplesCopy.right[iSamp] = rightChan[iSamp] = samples[1] * gain;
+					m_elapsedTime += secondsPerSample;
+				}
+			};
+		}
+		init();
 		return {
 			"start": function() {
-				var oldFunc = sampleGen;
+				var oldFunc = m_sampleGen;
 				try {
-					updateCode();
+					m_updateCode();
 				} catch(e) {
 					alert(e.name + "\n" + e.message);
-					sampleGen = oldFunc;
+					m_sampleGen = oldFunc;
 				}
-				scriptNode.connect(audioCtx.destination); this.reset();
-				isRunning = true;
+				m_scriptNode.connect(m_audioCtx.destination); this.reset();
+				m_isRunning = true;
 			},
-			"stop": function() { scriptNode.disconnect(); isRunning = false; },
-			"reset": function() { elapsedTime = 0.0; },
-			"isRunning": function() { return isRunning; },
-			"getBufferSize": function() { return scriptNode.bufferSize; },
-			"getSamples": function() { return samplesCopy; }
+			"stop": function() { m_scriptNode.disconnect(); m_isRunning = false; },
+			"reset": function() { m_elapsedTime = 0.0; },
+			"isRunning": function() { return m_isRunning; },
+			"getBufferSize": function() { return m_scriptNode.bufferSize; },
+			"getSamples": function() { return m_samplesCopy; }
 		};
 	}();
 	</script>
 	<form name="soundCode"> 
 		<input type="button" value="Run (ctrl-Enter)" onClick="waver.start();"/>
 		<input type="button" value="Stop (ctrl-Space)" onClick="waver.stop();"/>
+		Gain: <input type="range" min="0" max="100" value="50" name="gainSlider"/>
 	</form>
+	<H2>Help</H2>
+	<P>Use the editor to write Javascript code to generate an audio signal in real time.</P>
+	<P>The following built-in variables are available:
+		<UL>
+			<LI><TT><B>time</B></TT> [input] -- elapsed time in seconds</LI>
+			<LI><TT><B>left</B></TT> [output] -- store the sample value for the left channel here. Range is [-1.0...1.0].</LI>
+			<LI><TT><B>right</B></TT> [output] -- store the sample value for the right channel here. Range is [-1.0...1.0].</LI>
+		</UL>
+		For the sake of convenience, the following Math functions are defined at the global scope (no "Math." prefix required:
+		<TT><B>PI, abs(x), sign(x), sqrt(x), cbrt(x), min(x), max(x), ceil(x), floor(x), trunc(x), fract(x), log(x), log10(x),
+			exp(x), pow(x), sin(x), cos(x), tan(x), asin(x), acos(x), atan(x), atan2(x,y)</B></TT></P>
+
 	<H2>Example:</H2>
 	<pre>
-var p = 10*sin(time) * sin(6.2831 * 220.0 * time);
+var p = 10*sin(time) * sin(2*PI * 220.0 * time);
 var sample = sin(6.2831 * 220.0 * time + p) * exp(-4.0*fract(4*time));
 
 sample += sin(100 * time * exp(-10 * fract(2*time)));
@@ -141,9 +175,7 @@ right = sample;
 
 	<H2>TODO:</H2>
 	<UL>
-		<LI>Documentation</LI>
 		<LI>UI controls for:<UL>
-			<LI>Gain</LI>
 			<LI>Audio buffer size</LI>
 		</UL></LI>
 		<LI>Error reporting (syntax error, failure to set left/right, etc.)</LI>
