@@ -71,6 +71,7 @@ right = sample;</pre>
 	var log   = function(x) { return Math.log(x);   };
 	var log10 = function(x) { return Math.log10(x); };
 	var exp   = function(x) { return Math.exp(x);   };
+	var pow   = function(x) { return Math.pow(x);   }
 	var sin   = function(x) { return Math.sin(x);   };
 	var cos   = function(x) { return Math.cos(x);   };
 	var tan   = function(x) { return Math.tan(x);   };
@@ -78,6 +79,7 @@ right = sample;</pre>
 	var acos  = function(x) { return Math.acos(x);  };
 	var atan  = function(x) { return Math.atan(x);  };
 	var atan2 = function(y,x) { return Math.atan2(y,x); };
+	var PI = Math.PI;
 	var waver = function() {
 		"use strict";
 		var m_elapsedTime, m_scriptNode, m_isRunning, m_sampleGen, m_audioCtx, m_updateCode;
@@ -148,9 +150,21 @@ right = sample;</pre>
 		<input type="button" value="Stop (ctrl-Space)" onClick="waver.stop();"/>
 		Gain: <input type="range" min="0" max="100" value="50" name="gainSlider"/>
 	</form>
+	<H2>Help</H2>
+	<P>Use the editor to write Javascript code to generate an audio signal in real time.</P>
+	<P>The following built-in variables are available:
+		<UL>
+			<LI><TT><B>time</B></TT> [input] -- elapsed time in seconds</LI>
+			<LI><TT><B>left</B></TT> [output] -- store the sample value for the left channel here. Range is [-1.0...1.0].</LI>
+			<LI><TT><B>right</B></TT> [output] -- store the sample value for the right channel here. Range is [-1.0...1.0].</LI>
+		</UL>
+		For the sake of convenience, the following Math functions are defined at the global scope (no "Math." prefix required:
+		<TT><B>PI, abs(x), sign(x), sqrt(x), cbrt(x), min(x), max(x), ceil(x), floor(x), trunc(x), fract(x), log(x), log10(x),
+			exp(x), pow(x), sin(x), cos(x), tan(x), asin(x), acos(x), atan(x), atan2(x,y)</B></TT></P>
+
 	<H2>Example:</H2>
 	<pre>
-var p = 10*sin(time) * sin(6.2831 * 220.0 * time);
+var p = 10*sin(time) * sin(2*PI * 220.0 * time);
 var sample = sin(6.2831 * 220.0 * time + p) * exp(-4.0*fract(4*time));
 
 sample += sin(100 * time * exp(-10 * fract(2*time)));
@@ -161,7 +175,6 @@ right = sample;
 
 	<H2>TODO:</H2>
 	<UL>
-		<LI>Documentation</LI>
 		<LI>UI controls for:<UL>
 			<LI>Audio buffer size</LI>
 		</UL></LI>
