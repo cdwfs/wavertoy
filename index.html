@@ -58,6 +58,26 @@ right = sample;</pre>
 	
 	<!-- Audio generator -->
 	<script>
+	var abs   = function(x) { return Math.abs(x);   };
+	var sign  = function(x) { return Math.sign(x);  };
+	var sqrt  = function(x) { return Math.sqrt(x);  };
+	var cbrt  = function(x) { return Math.cbrt(x);  };
+	var min   = function(x) { return Math.min(x);   };
+	var max   = function(x) { return Math.max(x);   };
+	var ceil  = function(x) { return Math.ceil(x);  };
+	var floor = function(x) { return Math.floor(x); };
+	var trunc = function(x) { return Math.trunc(x); };
+	var fract = function(x) { return x-Math.floor(x); };
+	var log   = function(x) { return Math.log(x);   };
+	var log10 = function(x) { return Math.log10(x); };
+	var exp   = function(x) { return Math.exp(x);   };
+	var sin   = function(x) { return Math.sin(x);   };
+	var cos   = function(x) { return Math.cos(x);   };
+	var tan   = function(x) { return Math.tan(x);   };
+	var asin  = function(x) { return Math.asin(x);  };
+	var acos  = function(x) { return Math.acos(x);  };
+	var atan  = function(x) { return Math.atan(x);  };
+	var atan2 = function(y,x) { return Math.atan2(y,x); };
 	var waver = function() {
 		"use strict";
 		var m_elapsedTime, m_scriptNode, m_isRunning, m_sampleGen, m_audioCtx, m_updateCode;
@@ -82,11 +102,6 @@ right = sample;</pre>
 				m_sampleGen = new Function('time',
 					'"use strict";\n'
 					//+ 'try {\n'
-					+ 'var sin = function(x) { return Math.sin(x); };\n'
-					+ 'var cos = function(x) { return Math.cos(x); };\n'
-					+ 'var tan = function(x) { return Math.tan(x); };\n'
-					+ 'var exp = function(x) { return Math.exp(x); };\n'
-					+ 'var fract = function(x) { return x - Math.floor(x); };\n'
 						+ 'var left = 0;\n'
 						+ 'var right = 0;\n'
 						+ editor.getValue()
