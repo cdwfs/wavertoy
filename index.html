@@ -1,19 +1,21 @@
 <!doctype html>
-<head>
-	<title>Wavertoy</title>
-	<style type="text/css" media="screen">
-    #editor {
-        margin: 0;
-        position: relative !important;
-		width: 90%;
-		height: 300px;
-    }
-	</style>
-</head>
-<body>
-
-	<!-- Editor -->
-	<pre id="editor" style="font-size:18px">
+<html lang="en">
+	<head>
+		<title>Wavertoy</title>
+		<meta charset="utf-8"/>
+		<style type="text/css" media="screen">
+		#editor {
+			margin: 0;
+			position: relative !important;
+			width: 90%;
+			height: 300px;
+		}
+		</style>
+	</head>
+	<body>
+		
+		<!-- Editor -->
+		<pre id="editor" style="font-size:18px">
 // Generate samples based on the "time" parameter.
 var sample = sin(6.2831 * 220.0 * time);
 // Store final sample values in the "left" and "right" variables.
@@ -267,3 +269,4 @@ right = sample;
 	}();
 	</script>
 </body>
+</html>
