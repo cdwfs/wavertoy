@@ -1,269 +1,316 @@
 <!doctype html>
-<head>
-	<title>Wavertoy</title>
-	<style type="text/css" media="screen">
-    #editor {
-        margin: 0;
-        position: relative !important;
-		width: 90%;
-		height: 300px;
-    }
-	</style>
-</head>
-<body>
-
-	<!-- Editor -->
-	<pre id="editor" style="font-size:18px">
+<html lang="en">
+	<head>
+		<title>Wavertoy</title>
+		<meta charset="utf-8"/>
+		<style type="text/css" media="screen">
+		#editor {
+			margin: 0;
+			position: relative !important;
+			width: 90%;
+			height: 300px;
+		}
+		div.code {
+			font-family: monospace;
+			white-space: pre;
+			color: #FFFF00;
+			background-color: #202020;
+		}
+		</style>
+	</head>
+	<body>
+		
+		<!-- Editor -->
+		<pre id="editor" style="font-size:18px">
 // Generate samples based on the "time" parameter.
 var sample = sin(6.2831 * 220.0 * time);
 // Store final sample values in the "left" and "right" variables.
 left = sample;
 right = sample;</pre>
 
-	<script src="lib/src-min-noconflict/ace.js" charset="utf-8"></script>
-	<script>
-	var editor = ace.edit("editor");
-	editor.$blockScrolling = Infinity;
-	editor.setTheme("ace/theme/xcode");
-	editor.getSession().setMode("ace/mode/javascript");
-    editor.commands.addCommand({
-        name: "runSound",
-        bindKey: {win: "Ctrl-Enter", mac: "Command-Enter"},
-        exec: function(editor) {
-			//console.log("running!");
-			waver.start();
-        }
-    });
-    editor.commands.addCommand({
-        name: "stopSound",
-        bindKey: {win: "Ctrl-Space", mac: "Command-Space"},
-        exec: function(editor) {
-			//console.log("stopping!");
-			waver.stop();
-        }
-    });
-	// add command to lazy-load keybinding_menu extension
-    editor.commands.addCommand({
-        name: "showKeyboardShortcuts",
-        bindKey: {win: "Ctrl-Alt-h", mac: "Command-Alt-h"},
-        exec: function(editor) {
-			console.log("helping!");
-            ace.config.loadModule("ace/ext/keybinding_menu", function(module) {
-                module.init(editor);
-                editor.showKeyboardShortcuts()
-            })
-        }
-    });
-	</script>
-	
-	<!-- Audio generator -->
-	<script>
-	var abs   = function(x) { return Math.abs(x);   };
-	var sign  = function(x) { return Math.sign(x);  };
-	var sqrt  = function(x) { return Math.sqrt(x);  };
-	var cbrt  = function(x) { return Math.cbrt(x);  };
-	var min   = function(x) { return Math.min(x);   };
-	var max   = function(x) { return Math.max(x);   };
-	var ceil  = function(x) { return Math.ceil(x);  };
-	var floor = function(x) { return Math.floor(x); };
-	var trunc = function(x) { return Math.trunc(x); };
-	var fract = function(x) { return x-Math.floor(x); };
-	var log   = function(x) { return Math.log(x);   };
-	var log10 = function(x) { return Math.log10(x); };
-	var exp   = function(x) { return Math.exp(x);   };
-	var pow   = function(x) { return Math.pow(x);   }
-	var sin   = function(x) { return Math.sin(x);   };
-	var cos   = function(x) { return Math.cos(x);   };
-	var tan   = function(x) { return Math.tan(x);   };
-	var asin  = function(x) { return Math.asin(x);  };
-	var acos  = function(x) { return Math.acos(x);  };
-	var atan  = function(x) { return Math.atan(x);  };
-	var atan2 = function(y,x) { return Math.atan2(y,x); };
-	var PI = Math.PI;
-	var waver = function() {
-		"use strict";
-		var m_elapsedTime, m_scriptNode, m_isRunning, m_sampleGen, m_audioCtx, m_updateCode;
-		var m_samplesCopy;
-		function init() {
-			m_audioCtx = new AudioContext();
-			var sampleBufferSize = 1024;
-			var inputChannelCount = 0;
-			var outputChannelCount = 2;
-			m_scriptNode = m_audioCtx.createScriptProcessor(sampleBufferSize,
-				inputChannelCount, outputChannelCount);
-			m_samplesCopy = {
-				left: new Float32Array(sampleBufferSize),
-				right: new Float32Array(sampleBufferSize)
+		<script src="lib/src-min-noconflict/ace.js" charset="utf-8"></script>
+		<script>
+		var editor = ace.edit("editor");
+		editor.$blockScrolling = Infinity;
+		editor.setTheme("ace/theme/xcode");
+		editor.getSession().setMode("ace/mode/javascript");
+		editor.commands.addCommand({
+			name: "runSound",
+			bindKey: {win: "Ctrl-Enter", mac: "Command-Enter"},
+			exec: function(editor) {
+				//console.log("running!");
+				waver.start();
+			}
+		});
+		editor.commands.addCommand({
+			name: "stopSound",
+			bindKey: {win: "Ctrl-Space", mac: "Command-Space"},
+			exec: function(editor) {
+				//console.log("stopping!");
+				waver.stop();
+			}
+		});
+		// add command to lazy-load keybinding_menu extension
+		editor.commands.addCommand({
+			name: "showKeyboardShortcuts",
+			bindKey: {win: "Ctrl-Alt-h", mac: "Command-Alt-h"},
+			exec: function(editor) {
+				console.log("helping!");
+				ace.config.loadModule("ace/ext/keybinding_menu", function(module) {
+					module.init(editor);
+					editor.showKeyboardShortcuts()
+				})
+			}
+		});
+		</script>
+		
+		<!-- Audio generator -->
+		<script>
+		var abs   = function(x) { return Math.abs(x);   };
+		var sign  = function(x) { return Math.sign(x);  };
+		var sqrt  = function(x) { return Math.sqrt(x);  };
+		var cbrt  = function(x) { return Math.cbrt(x);  };
+		var min   = function(x) { return Math.min(x);   };
+		var max   = function(x) { return Math.max(x);   };
+		var ceil  = function(x) { return Math.ceil(x);  };
+		var floor = function(x) { return Math.floor(x); };
+		var trunc = function(x) { return Math.trunc(x); };
+		var fract = function(x) { return x-Math.floor(x); };
+		var log   = function(x) { return Math.log(x);   };
+		var log10 = function(x) { return Math.log10(x); };
+		var exp   = function(x) { return Math.exp(x);   };
+		var pow   = function(x) { return Math.pow(x);   }
+		var sin   = function(x) { return Math.sin(x);   };
+		var cos   = function(x) { return Math.cos(x);   };
+		var tan   = function(x) { return Math.tan(x);   };
+		var asin  = function(x) { return Math.asin(x);  };
+		var acos  = function(x) { return Math.acos(x);  };
+		var atan  = function(x) { return Math.atan(x);  };
+		var atan2 = function(y,x) { return Math.atan2(y,x); };
+		var PI = Math.PI;
+		var waver = function() {
+			"use strict";
+			var m_elapsedTime, m_scriptNode, m_isRunning, m_sampleGen, m_audioCtx, m_updateCode;
+			var m_samplesCopy;
+			function init() {
+				m_audioCtx = new AudioContext();
+				var sampleBufferSize = 1024;
+				var inputChannelCount = 0;
+				var outputChannelCount = 2;
+				m_scriptNode = m_audioCtx.createScriptProcessor(sampleBufferSize,
+					inputChannelCount, outputChannelCount);
+				m_samplesCopy = {
+					left: new Float32Array(sampleBufferSize),
+					right: new Float32Array(sampleBufferSize)
+				};
+				var secondsPerSample = 1.0 / m_audioCtx.sampleRate;
+				m_isRunning = false;
+				m_elapsedTime = 0;
+				
+				m_sampleGen = function(time) { return [0,0] };
+				m_updateCode = function() {
+					m_sampleGen = new Function('time',
+						'"use strict";\n'
+						//+ 'try {\n'
+							+ 'var left = 0;\n'
+							+ 'var right = 0;\n'
+							+ editor.getValue()
+							+ 'return [left,right];\n'
+						//+ '} catch(e) { alert(e.message); }\n'
+					);
+				};
+				m_scriptNode.onaudioprocess = function(audioProcessingEvent) {
+					var outputBuffer = audioProcessingEvent.outputBuffer;
+					var leftChan  = outputBuffer.getChannelData(0);
+					var rightChan = outputBuffer.getChannelData(1);
+					var gain = document.getElementsByName("gainSlider")[0].value * 0.01;
+					for (var iSamp=0; iSamp<this.bufferSize; iSamp += 1) {
+						var samples = m_sampleGen(m_elapsedTime);
+						m_samplesCopy.left[iSamp] = leftChan[iSamp] = samples[0] * gain;
+						m_samplesCopy.right[iSamp] = rightChan[iSamp] = samples[1] * gain;
+						m_elapsedTime += secondsPerSample;
+					}
+				};
+			}
+			init();
+			return {
+				"start": function() {
+					var oldFunc = m_sampleGen;
+					try {
+						m_updateCode();
+					} catch(e) {
+						alert(e.name + "\n" + e.message);
+						m_sampleGen = oldFunc;
+					}
+					m_scriptNode.connect(m_audioCtx.destination); this.reset();
+					m_isRunning = true;
+				},
+				"stop": function() { m_scriptNode.disconnect(); m_isRunning = false; },
+				"reset": function() { m_elapsedTime = 0.0; },
+				"isRunning": function() { return m_isRunning; },
+				"getBufferSize": function() { return m_scriptNode.bufferSize; },
+				"getSamples": function() { return m_samplesCopy; }
 			};
-			var secondsPerSample = 1.0 / m_audioCtx.sampleRate;
-			m_isRunning = false;
-			m_elapsedTime = 0;
-			
-			m_sampleGen = function(time) { return [0,0] };
-			m_updateCode = function() {
-				m_sampleGen = new Function('time',
-					'"use strict";\n'
-					//+ 'try {\n'
-						+ 'var left = 0;\n'
-						+ 'var right = 0;\n'
-						+ editor.getValue()
-						+ 'return [left,right];\n'
-					//+ '} catch(e) { alert(e.message); }\n'
-				);
-			};
-			m_scriptNode.onaudioprocess = function(audioProcessingEvent) {
-				var outputBuffer = audioProcessingEvent.outputBuffer;
-				var leftChan  = outputBuffer.getChannelData(0);
-				var rightChan = outputBuffer.getChannelData(1);
-				var gain = document.getElementsByName("gainSlider")[0].value * 0.01;
-				for (var iSamp=0; iSamp<this.bufferSize; iSamp += 1) {
-					var samples = m_sampleGen(m_elapsedTime);
-				m_samplesCopy.left[iSamp] = leftChan[iSamp] = samples[0] * gain;
-					m_samplesCopy.right[iSamp] = rightChan[iSamp] = samples[1] * gain;
-					m_elapsedTime += secondsPerSample;
-				}
-			};
-		}
-		init();
-		return {
-			"start": function() {
-				var oldFunc = m_sampleGen;
-				try {
-					m_updateCode();
-				} catch(e) {
-					alert(e.name + "\n" + e.message);
-					m_sampleGen = oldFunc;
-				}
-				m_scriptNode.connect(m_audioCtx.destination); this.reset();
-				m_isRunning = true;
-			},
-			"stop": function() { m_scriptNode.disconnect(); m_isRunning = false; },
-			"reset": function() { m_elapsedTime = 0.0; },
-			"isRunning": function() { return m_isRunning; },
-			"getBufferSize": function() { return m_scriptNode.bufferSize; },
-			"getSamples": function() { return m_samplesCopy; }
-		};
-	}();
-	</script>
-	<form name="soundCode"> 
-		<input type="button" value="Run (ctrl-Enter)" onClick="waver.start();"/>
-		<input type="button" value="Stop (ctrl-Space)" onClick="waver.stop();"/>
-		Gain: <input type="range" min="0" max="100" value="50" name="gainSlider"/>
-	</form>
-	<H2>Help</H2>
-	<P>Use the editor to write Javascript code to generate an audio signal in real time.</P>
-	<P>The following built-in variables are available:
-		<UL>
-			<LI><TT><B>time</B></TT> [input] -- elapsed time in seconds</LI>
-			<LI><TT><B>left</B></TT> [output] -- store the sample value for the left channel here. Range is [-1.0...1.0].</LI>
-			<LI><TT><B>right</B></TT> [output] -- store the sample value for the right channel here. Range is [-1.0...1.0].</LI>
-		</UL>
-		For the sake of convenience, the following Math functions are defined at the global scope (no "Math." prefix required:
-		<TT><B>PI, abs(x), sign(x), sqrt(x), cbrt(x), min(x), max(x), ceil(x), floor(x), trunc(x), fract(x), log(x), log10(x),
-			exp(x), pow(x), sin(x), cos(x), tan(x), asin(x), acos(x), atan(x), atan2(x,y)</B></TT></P>
+		}();
+		</script>
+		<form name="soundCode"> 
+			<input type="button" value="Run (ctrl-Enter)" onClick="waver.start();"/>
+			<input type="button" value="Stop (ctrl-Space)" onClick="waver.stop();"/>
+			Gain: <input type="range" min="0" max="100" value="50" name="gainSlider"/>
+		</form>
+		<H2>Help</H2>
+		<P>Use the editor to write Javascript code to generate an audio signal in real time.</P>
+		<P>The following built-in variables are available:
+			<UL>
+				<LI><TT><B>time</B></TT> [input] -- elapsed time in seconds</LI>
+				<LI><TT><B>left</B></TT> [output] -- store the sample value for the left channel here. Range is [-1.0...1.0].</LI>
+				<LI><TT><B>right</B></TT> [output] -- store the sample value for the right channel here. Range is [-1.0...1.0].</LI>
+			</UL>
+			For the sake of convenience, the following Math functions are defined at the global scope (no "Math." prefix required:
+			<TT><B>PI, abs(x), sign(x), sqrt(x), cbrt(x), min(x), max(x), ceil(x), floor(x), trunc(x), fract(x), log(x), log10(x),
+				exp(x), pow(x), sin(x), cos(x), tan(x), asin(x), acos(x), atan(x), atan2(x,y)</B></TT></P>
 
-	<H2>Example:</H2>
-	<pre>
+		<H2>Tutorial:</H2>
+		<P>Let's start with the simplest example possible: a sine wave:
+			<div translate="no" class="code">
+var sample = sin(time);
+left = sample;
+right = sample;
+			</div>
+			The resulting wave undergoes a single cycle once every 2*PI
+			(=6.28...) seconds. This gives a frequency of 1/6.28 = 0.159
+			Hz, which is well beyond the limits of human hearing (roughly
+			20Hz through 20,000 Hz). We'll need a much higher frequency if
+			we want to hear anything. First, let's generate a 1Hz wave, by
+			multiplying the time by 2*PI:
+			<div translate="no" class="code">
+var sample = sin(2*PI*time);
+left = sample;
+right = sample;
+			</div>
+
+			Next, we declare a <tt>freq</tt> variable to store the desired
+			wave frequency. We'll start at 1.0 for now:
+			<div translate="no" class="code">
+var freqHz = 1.0;
+var sample = sin(freqHz * 2*PI*time);
+left = sample;
+right = sample;
+			</div>
+
+			This is still inaudible, but if we increase the value of
+			freqHz, we should eventually start to hear a low bass hum at
+			around 20Hz. Try it!
+			<div translate="no" class="code">
+var freqHz = 20.0;
+var sample = sin(freqHz * 2*PI*time);
+left = sample;
+right = sample;
+			</div></P>
+
+		<H2>Examples:</H2>
+		<div translate="no" class="code">
 var p = 10*sin(time) * sin(2*PI * 220.0 * time);
-var sample = sin(6.2831 * 220.0 * time + p) * exp(-4.0*fract(4*time));
+var sample = sin(2*PI * 220.0 * time + p) * exp(-4.0*fract(4*time));
 
 sample += sin(100 * time * exp(-10 * fract(2*time)));
 
 left = sample;
 right = sample;
-	</pre>
-
-	<H2>TODO:</H2>
-	<UL>
-		<LI>UI controls for:<UL>
-			<LI>Audio buffer size</LI>
-		</UL></LI>
-		<LI>Error reporting (syntax error, failure to set left/right, etc.)</LI>
-	</UL>
+		</div>
 		
-	<!-- Waveform display -->
-	<script src="lib/Detector.js"></script>
-	<script src="lib/three.min.js"></script>
-	<script>
-	var waveDisplay = function() {
-		"use strict";
+		<H2>TODO:</H2>
+		<UL>
+			<LI>UI controls for:<UL>
+				<LI>Audio buffer size</LI>
+			</UL></LI>
+			<LI>Error reporting (syntax error, failure to set left/right, etc.)</LI>
+		</UL>
 		
-		var scene, camera, renderer, waveLObj, waveRObj;
-		function init() {
-			if (!Detector.webgl) {
-				Detector.addGetWebGLMessage();
-			}
+		<!-- Waveform display -->
+		<script src="lib/Detector.js"></script>
+		<script src="lib/three.min.js"></script>
+		<script>
+		var waveDisplay = function() {
+			"use strict";
 			
-			scene = new THREE.Scene();
-			
-			camera = new THREE.OrthographicCamera(-1, 1, 1, -1, -1, 1);
-			
-			renderer = new THREE.WebGLRenderer();
-			renderer.setClearColor(0x000000, 1.0);
-			renderer.setSize(window.innerWidth*0.9, 300);
-
-			var zeroLGeom = new THREE.Geometry();
-			zeroLGeom.vertices.push( new THREE.Vector3(-1,  0.5, -0.5) );
-			zeroLGeom.vertices.push( new THREE.Vector3( 1,  0.5, -0.5) );
-			var zeroRGeom = new THREE.Geometry();
-			zeroRGeom.vertices.push( new THREE.Vector3(-1, -0.5, -0.5) );
-			zeroRGeom.vertices.push( new THREE.Vector3( 1, -0.5, -0.5) );
-			var zeroMat = new THREE.LineBasicMaterial({color:0x4040C0});
-			scene.add( new THREE.Line(zeroLGeom, zeroMat) );
-			scene.add( new THREE.Line(zeroRGeom, zeroMat) );
-			
-			var waveMat = new THREE.LineBasicMaterial({color: 0xFFFFFF});
-			var iVert;
-			var waveLGeom = new THREE.Geometry();
-			for(iVert=0; iVert<waver.getBufferSize(); iVert+=1) {
-				var vertX = (iVert/waver.getBufferSize()) * 2.0 - 1.0;
-				waveLGeom.vertices.push( new THREE.Vector3(vertX, 0, 0));
-			}
-			waveLObj = new THREE.Line(waveLGeom, waveMat);
-			waveLObj.translateY(0.5);
-			waveLObj.scale.y = 0.5;
-			waveLObj.name = "waveL";
-			scene.add(waveLObj);
-			
-			var waveRGeom = new THREE.Geometry();
-			for(iVert=0; iVert<waver.getBufferSize(); iVert+=1) {
-				var vertX = (iVert/waver.getBufferSize()) * 2.0 - 1.0;
-				waveRGeom.vertices.push( new THREE.Vector3(vertX, 0, 0));
-			}
-			waveRObj = new THREE.Line(waveRGeom, waveMat);
-			waveRObj.translateY(-0.5);
-			waveRObj.scale.y = 0.5;
-			waveRObj.name = "waveR";
-			scene.add(waveRObj);
-			
-			document.body.insertBefore(renderer.domElement, document.body.firstChild);
-			render();			
-		}
-		
-		function render() {
-			var iVert;
-			var vertsL = waveLObj.geometry.vertices;
-			var vertsR = waveRObj.geometry.vertices;
-			if (waver.isRunning()) {
-				var samples = waver.getSamples();
-				for(iVert=0; iVert < vertsL.length; iVert += 1) {
-					vertsL[iVert].y = samples.left[iVert];
-					vertsR[iVert].y = samples.right[iVert];
+			var scene, camera, renderer, waveLObj, waveRObj;
+			function init() {
+				if (!Detector.webgl) {
+					Detector.addGetWebGLMessage();
 				}
-			} else {
-				for(iVert=0; iVert < vertsL.length; iVert += 1) {
-					vertsL[iVert].y *= 0.5;
-					vertsR[iVert].y *= 0.5;
+				
+				scene = new THREE.Scene();
+				
+				camera = new THREE.OrthographicCamera(-1, 1, 1, -1, -1, 1);
+				
+				renderer = new THREE.WebGLRenderer();
+				renderer.setClearColor(0x000000, 1.0);
+				renderer.setSize(window.innerWidth*0.9, 300);
+
+				var zeroLGeom = new THREE.Geometry();
+				zeroLGeom.vertices.push( new THREE.Vector3(-1,  0.5, -0.5) );
+				zeroLGeom.vertices.push( new THREE.Vector3( 1,  0.5, -0.5) );
+				var zeroRGeom = new THREE.Geometry();
+				zeroRGeom.vertices.push( new THREE.Vector3(-1, -0.5, -0.5) );
+				zeroRGeom.vertices.push( new THREE.Vector3( 1, -0.5, -0.5) );
+				var zeroMat = new THREE.LineBasicMaterial({color:0x4040C0});
+				scene.add( new THREE.Line(zeroLGeom, zeroMat) );
+				scene.add( new THREE.Line(zeroRGeom, zeroMat) );
+				
+				var waveMat = new THREE.LineBasicMaterial({color: 0xFFFFFF});
+				var iVert;
+				var waveLGeom = new THREE.Geometry();
+				for(iVert=0; iVert<waver.getBufferSize(); iVert+=1) {
+					var vertX = (iVert/waver.getBufferSize()) * 2.0 - 1.0;
+					waveLGeom.vertices.push( new THREE.Vector3(vertX, 0, 0));
 				}
+				waveLObj = new THREE.Line(waveLGeom, waveMat);
+				waveLObj.translateY(0.5);
+				waveLObj.scale.y = 0.5;
+				waveLObj.name = "waveL";
+				scene.add(waveLObj);
+				
+				var waveRGeom = new THREE.Geometry();
+				for(iVert=0; iVert<waver.getBufferSize(); iVert+=1) {
+					var vertX = (iVert/waver.getBufferSize()) * 2.0 - 1.0;
+					waveRGeom.vertices.push( new THREE.Vector3(vertX, 0, 0));
+				}
+				waveRObj = new THREE.Line(waveRGeom, waveMat);
+				waveRObj.translateY(-0.5);
+				waveRObj.scale.y = 0.5;
+				waveRObj.name = "waveR";
+				scene.add(waveRObj);
+				
+				document.body.insertBefore(renderer.domElement, document.body.firstChild);
+				render();			
 			}
-			waveLObj.geometry.verticesNeedUpdate = true;
-			waveRObj.geometry.verticesNeedUpdate = true;
 			
-			renderer.render(scene, camera);
-			requestAnimationFrame(render);
-		}
-		
-		window.onload = init;		
-	}();
-	</script>
-</body>
+			function render() {
+				var iVert;
+				var vertsL = waveLObj.geometry.vertices;
+				var vertsR = waveRObj.geometry.vertices;
+				if (waver.isRunning()) {
+					var samples = waver.getSamples();
+					for(iVert=0; iVert < vertsL.length; iVert += 1) {
+						vertsL[iVert].y = samples.left[iVert];
+						vertsR[iVert].y = samples.right[iVert];
+					}
+				} else {
+					for(iVert=0; iVert < vertsL.length; iVert += 1) {
+						vertsL[iVert].y *= 0.5;
+						vertsR[iVert].y *= 0.5;
+					}
+				}
+				waveLObj.geometry.verticesNeedUpdate = true;
+				waveRObj.geometry.verticesNeedUpdate = true;
+				
+				renderer.render(scene, camera);
+				requestAnimationFrame(render);
+			}
+			
+			window.onload = init;		
+		}();
+		</script>
+	</body>
+</html>
