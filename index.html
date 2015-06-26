@@ -13,6 +13,7 @@
 		div.code {
 			font-family: monospace;
 			white-space: pre;
+			padding: 10px;
 			color: #FFFF00;
 			background-color: #202020;
 		}
@@ -171,59 +172,136 @@ right = sample;</pre>
 				exp(x), pow(x), sin(x), cos(x), tan(x), asin(x), acos(x), atan(x), atan2(x,y)</B></TT></P>
 
 		<H2>Tutorial:</H2>
-		<P>Let's start with the simplest example possible: a sine wave:
-			<div translate="no" class="code">
-var sample = sin(time);
+		
+		<P><B>Basic Wave Generation</B><BR>Let's start with the simplest example possible: a sine wave:</P>
+		<div translate="no" class="code">var sample = sin(time);
 left = sample;
-right = sample;
-			</div>
-			The resulting wave undergoes a single cycle once every 2*PI
+right = sample;</div>
+		
+		<p>The resulting wave undergoes a single cycle once every 2*PI
 			(=6.28...) seconds. This gives a frequency of 1/6.28 = 0.159
 			Hz, which is well beyond the limits of human hearing (roughly
 			20Hz through 20,000 Hz). We'll need a much higher frequency if
 			we want to hear anything. First, let's generate a 1Hz wave, by
-			multiplying the time by 2*PI:
-			<div translate="no" class="code">
-var sample = sin(2*PI*time);
+			multiplying the time by 2*PI:</p>
+		
+		<div translate="no" class="code">var sample = sin(2*PI*time);
 left = sample;
-right = sample;
-			</div>
+right = sample;</div>
 
-			Next, we declare a <tt>freq</tt> variable to store the desired
-			wave frequency. We'll start at 1.0 for now:
-			<div translate="no" class="code">
-var freqHz = 1.0;
+		<p>Next, we declare a <tt>freq</tt> variable to store the desired
+			wave frequency. We'll start at 1.0 for now:</p>
+
+		<div translate="no" class="code">var freqHz = 1.0;
 var sample = sin(freqHz * 2*PI*time);
 left = sample;
-right = sample;
-			</div>
+right = sample;</div>
 
-			This is still inaudible, but if we increase the value of
-			freqHz, we should eventually start to hear a low bass hum at
-			around 20Hz. Try it!
-			<div translate="no" class="code">
-var freqHz = 20.0;
+		<p>This is still inaudible, but if we increase the value of
+			freqHz, we should eventually start to hear a low bass hum
+			at around 20Hz. Try it! For reference, the pitch most
+			orchestras tune to (A above middle C) is 440Hz.</p>
+		
+		<div translate="no" class="code">var freqHz = 20.0;
 var sample = sin(freqHz * 2*PI*time);
 left = sample;
-right = sample;
-			</div></P>
+right = sample;</div>
+			
+		<p><B>Adding Rhythm</B><BR>We can add a decay to the sound by scaling the sample
+			values by <tt>exp(-x)</tt>. At x=0, <tt>exp(0)</tt> returns
+			1.0; as x gets larger (and -x gets closer to -infinity),
+			<tt>exp(-x)</tt> approaches zero. By scaling the input to
+			<tt>exp()</tt>, we get a longer or shorter decay.</p>
 
+		<div translate="no" class="code">var freqHz = 440.0; // higher value -> higher pitch
+var decaySpeed = 4.0; // higher value -> faster decay (shorter notes)
+var sample = sin(freqHz * 2*PI*time) * exp(-decaySpeed*time);
+left = sample;
+right = sample;</div>
+
+		<p>Now let's add some rhythm to the sound. Instead of passing
+			<tt>time</tt> directory to <tt>exp()</tt>, we use <tt>fract()</tt> to
+			only pass the fractional part of <tt>time</tt>. This
+			forces the decay factor to reset to 1.0 every second. We
+			can go one step further and define a scale factor for the <tt>fract()</tt> term
+			so that we can express the tempo in terms of a more
+			familiar unit like beats per minute (bpm).</p>
+
+		<div translate="no" class="code">var freqHz = 440.0; // higher value -> higher pitch
+var decaySpeed = 4.0; // higher value -> faster decay (shorter notes)
+var tempoBpm = 60; // higher value -> faster rhythm
+var sample = sin(freqHz * 2*PI*time) * exp(-decaySpeed*fract(tempoBpm/60 * time));
+left = sample;
+right = sample;</div>
+
+		<p><B>Advanced Wave Generation</B><BR>Sine waves are boring. Let's generate a more interesting
+			waveform, like a square wave. First let's pull the wave
+			generator into its own function.</p>
+		<div translate="no" class="code">var freqHz = 440.0; // higher value -> higher pitch
+var decaySpeed = 4.0; // higher value -> faster decay (shorter notes)
+var tempoBpm = 60; // higher value -> faster rhythm
+function waveSine(freq,t) { return sin(freq * 2*PI*t); }
+var sample = waveSine(freqHz,time) * exp(-decaySpeed*fract(tempoBpm/60 * time));
+left = sample;
+right = sample;</div>
+
+		<p>We can build a square wave a few different ways. The first
+			uses <A HREF="http://en.wikipedia.org/wiki/Fourier_analysis" >Fourier analysis</A> to
+			break a square wave into an infinite series of sine waves
+			(for more details, see the Wikipedia entry for <A HREF="http://en.wikipedia.org/wiki/Square_wave#Examining_the_square_wave">square waves</A>).
+			The more terms we add, the more closely we approximate a
+			true square wave. Try slowly increasing the value of
+			<tt>numHarmonics</tt> below, or jump straight to around
+			50 for a pretty good approximation of a square wave.</p>
+		
+		<div translate="no" class="code">var freqHz = 440.0; // higher value -> higher pitch
+var decaySpeed = 4.0; // higher value -> faster decay (shorter notes)
+var tempoBpm = 60; // higher value -> faster rhythm
+function waveSine(freq,t) { return sin(freq * 2*PI*t); }
+function waveSquare(freq,t) {
+	var sample=0;
+	var numHarmonics=1; // higher values -> better approximation
+	var iHarm;
+	for(iHarm=0; iHarm&ltnumHarmonics; iHarm += 1) {
+		sample += sin(freq * (2*iHarm+1)*2*PI*t) / (2*iHarm+1);
+	}
+	sample *= 4/PI;
+	return sample;
+}
+var sample = waveSquare(freqHz,time) * exp(-decaySpeed*fract(tempoBpm/60 * time));
+left = sample;
+right = sample;</div>
+			
+		<p>...or we could just take the high road, and observe
+			that it's quicker and easier to generate a perfect square
+			wave by simply taking the sign (+1 or -1) of a regular
+			sine wave. But the Fourier approach is still worth knowing
+			about!</p>
+
+		<div translate="no" class="code">var freqHz = 440.0; // higher value -> higher pitch
+var decaySpeed = 4.0; // higher value -> faster decay (shorter notes)
+var tempoBpm = 60; // higher value -> faster rhythm
+function waveSine(freq,t) { return sin(freq * 2*PI*t); }
+function waveSquare(freq,t) { return sign( sin(freq * 2*PI*t) ); }
+var sample = waveSquare(freqHz,time) * exp(-decaySpeed*fract(tempoBpm/60 * time));
+left = sample;
+right = sample;</div>
+			
 		<H2>Examples:</H2>
-		<div translate="no" class="code">
-var p = 10*sin(time) * sin(2*PI * 220.0 * time);
+		<div translate="no" class="code">var p = 10*sin(time) * sin(2*PI * 220.0 * time);
 var sample = sin(2*PI * 220.0 * time + p) * exp(-4.0*fract(4*time));
 
 sample += sin(100 * time * exp(-10 * fract(2*time)));
 
 left = sample;
-right = sample;
-		</div>
+right = sample;</div>
 		
 		<H2>TODO:</H2>
 		<UL>
 			<LI>UI controls for:<UL>
 				<LI>Audio buffer size</LI>
 			</UL></LI>
+			<LI>Clear audio buffer before starting the sound.</LI>
 			<LI>Error reporting (syntax error, failure to set left/right, etc.)</LI>
 		</UL>
 		
