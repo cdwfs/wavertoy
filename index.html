@@ -286,7 +286,31 @@ function waveSquare(freq,t) { return sign( sin(freq * 2*PI*t) ); }
 var sample = waveSquare(freqHz,time) * exp(-decaySpeed*fract(tempoBpm/60 * time));
 left = sample;
 right = sample;</div>
-			
+
+		<P><B>Phase Modulation</B><BR>Another way we can change the timbre of our waveform is to use a technique called <A HREF="http://en.wikipedia.org/Phase_modulation">phase modulation</A>. We start by adding a second sine wave as an offset to the parameter of the main sine wave, with a scale factor called the "modulation index". Try increasing the modulation index to hear the difference in the resulting tone.</P>
+
+		<div translate="no" class="code">var freqHz = 440.0; // higher value -> higher pitch
+var decaySpeed = 4.0; // higher value -> faster decay (shorter notes)
+var tempoBpm = 60; // higher value -> faster rhythm
+var modulationIndex = 1.0;
+var sample = sin(freqHz * 2*PI*time + modulationIndex*sin(freqHz * 2*PI*time))
+	* exp(-decaySpeed*fract(tempoBpm/60 * time));
+left = sample;
+right = sample;</div>
+
+		<P>...and once you have a modulation index, the obvious next step is to modulate it (with yet ANOTHER sine wave). As usual, try playing with the constants to see what effect they have on the output.</P>
+
+		<div translate="no" class="code">var freqHz = 220.0; // higher value -> higher pitch
+var decaySpeed = 4.0; // higher value -> faster decay (shorter notes)
+var tempoBpm = 60; // higher value -> faster rhythm
+var modulationIndex = 10.0 + 15.0*sin(3.0*time);
+var sample = sin(freqHz * 2*PI*time + modulationIndex*sin(freqHz * 2*PI*time))
+	* exp(-decaySpeed*fract(tempoBpm/60 * time));
+left = sample;
+right = sample;</div>
+
+
+		
 		<H2>Examples:</H2>
 		<div translate="no" class="code">var p = 10*sin(time) * sin(2*PI * 220.0 * time);
 var sample = sin(2*PI * 220.0 * time + p) * exp(-4.0*fract(4*time));
