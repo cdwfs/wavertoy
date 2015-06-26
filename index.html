@@ -313,10 +313,16 @@ right = sample;</div>
 
 		
 		<H2>Examples:</H2>
-		<div translate="no" class="code">var p = 10*sin(time) * sin(2*PI * 220.0 * time);
-var sample = sin(2*PI * 220.0 * time + p) * exp(-4.0*fract(4*time));
+		<div translate="no" class="code">var modulationIndex = 10*sin(time);
+var freqHz = 220;
+var drumDistortion = 1000.0;
+var phaseOffset = modulationIndex * sin(freqHz * 2*PI*time);
+var sample = sin(freqHz * 2*PI*time + phaseOffset) * exp(-4.0*fract(4*time));
 
-sample += sin(100 * time * exp(-10 * fract(2*time)));
+var kick = clamp( drumDistortion*sin(  100*exp( -10*fract(2.0*time      ))), 0, 1);
+var hat  = clamp( drumDistortion*sin( 1000*exp(-100*fract(2.0*time + 0.5))), 0, 1);
+sample += kick;
+sample += hat;
 
 left = sample;
 right = sample;</div>
