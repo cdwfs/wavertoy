@@ -319,8 +319,8 @@ var drumDistortion = 1000.0;
 var phaseOffset = modulationIndex * sin(freqHz * 2*PI*time);
 var sample = sin(freqHz * 2*PI*time + phaseOffset) * exp(-4.0*fract(4*time));
 
-var kick = clamp( drumDistortion*sin(  100*exp( -10*fract(2.0*time      ))), 0, 1);
-var hat  = clamp( drumDistortion*sin( 1000*exp(-100*fract(2.0*time + 0.5))), 0, 1);
+var kick = clamp( drumDistortion*sin(  100*exp( -10*fract(2.0*time      ))), -1, 1);
+var hat  = clamp( drumDistortion*sin( 1000*exp(-100*fract(2.0*time + 0.5))), -1, 1);
 sample += kick;
 sample += hat;
 
