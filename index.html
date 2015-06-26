@@ -73,6 +73,7 @@ right = sample;</pre>
 		var cbrt  = function(x) { return Math.cbrt(x);  };
 		var min   = function(x,y) { return Math.min(x,y);   };
 		var max   = function(x,y) { return Math.max(x,y);   };
+		var clamp = function(x,minX,maxX) { return Math.min(maxX, Math.max(minX,x)); }
 		var ceil  = function(x) { return Math.ceil(x);  };
 		var floor = function(x) { return Math.floor(x); };
 		var trunc = function(x) { return Math.trunc(x); };
@@ -168,7 +169,7 @@ right = sample;</pre>
 				<LI><TT><B>right</B></TT> [output] -- store the sample value for the right channel here. Range is [-1.0...1.0].</LI>
 			</UL>
 			For the sake of convenience, the following Math functions are defined at the global scope (no "Math." prefix required:
-			<TT><B>PI, abs(x), sign(x), sqrt(x), cbrt(x), min(x), max(x), ceil(x), floor(x), trunc(x), fract(x), log(x), log10(x),
+			<TT><B>PI, abs(x), sign(x), sqrt(x), cbrt(x), min(x), max(x), clamp(x,minX,maxX), ceil(x), floor(x), trunc(x), fract(x), log(x), log10(x),
 				exp(x), pow(x), sin(x), cos(x), tan(x), asin(x), acos(x), atan(x), atan2(x,y)</B></TT></P>
 
 		<H2>Tutorial:</H2>
@@ -312,10 +313,16 @@ right = sample;</div>
 
 		
 		<H2>Examples:</H2>
-		<div translate="no" class="code">var p = 10*sin(time) * sin(2*PI * 220.0 * time);
-var sample = sin(2*PI * 220.0 * time + p) * exp(-4.0*fract(4*time));
+		<div translate="no" class="code">var modulationIndex = 10*sin(time);
+var freqHz = 220;
+var drumDistortion = 1000.0;
+var phaseOffset = modulationIndex * sin(freqHz * 2*PI*time);
+var sample = sin(freqHz * 2*PI*time + phaseOffset) * exp(-4.0*fract(4*time));
 
-sample += sin(100 * time * exp(-10 * fract(2*time)));
+var kick = clamp( drumDistortion*sin(  100*exp( -10*fract(2.0*time      ))), 0, 1);
+var hat  = clamp( drumDistortion*sin( 1000*exp(-100*fract(2.0*time + 0.5))), 0, 1);
+sample += kick;
+sample += hat;
 
 left = sample;
 right = sample;</div>
