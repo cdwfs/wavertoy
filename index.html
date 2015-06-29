@@ -125,6 +125,13 @@ right = sample;</pre>
 					var outputBuffer = audioProcessingEvent.outputBuffer;
 					var leftChan  = outputBuffer.getChannelData(0);
 					var rightChan = outputBuffer.getChannelData(1);
+					if (!m_isRunning) {
+						for (var iSamp=0; iSamp<this.bufferSize; iSamp += 1) {
+							m_samplesCopy.left[iSamp] = leftChan[iSamp] = 0;
+							m_samplesCopy.right[iSamp] = rightChan[iSamp] = 0;
+						}
+						return;
+					}
 					var gain = document.getElementsByName("gainSlider")[0].value * 0.01;
 					for (var iSamp=0; iSamp<this.bufferSize; iSamp += 1) {
 						var samples = m_sampleGen(m_elapsedTime);
@@ -133,6 +140,7 @@ right = sample;</pre>
 						m_elapsedTime += secondsPerSample;
 					}
 				};
+				m_scriptNode.connect(m_audioCtx.destination);
 			}
 			init();
 			return {
@@ -144,7 +152,7 @@ right = sample;</pre>
 						alert(e.name + "\n" + e.message);
 						m_sampleGen = oldFunc;
 					}
-					m_scriptNode.connect(m_audioCtx.destination); this.reset();
+					this.reset();
 					m_isRunning = true;
 				},
 				"stop": function() { m_scriptNode.disconnect(); m_isRunning = false; },
@@ -332,7 +340,6 @@ right = sample;</div>
 			<LI>UI controls for:<UL>
 				<LI>Audio buffer size</LI>
 			</UL></LI>
-			<LI>Clear audio buffer before starting the sound.</LI>
 			<LI>Error reporting (syntax error, failure to set left/right, etc.)</LI>
 		</UL>
 		
