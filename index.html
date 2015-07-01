@@ -155,7 +155,7 @@ right = sample;</pre>
 					this.reset();
 					m_isRunning = true;
 				},
-				"stop": function() { m_scriptNode.disconnect(); m_isRunning = false; },
+				"stop": function() { m_isRunning = false; },
 				"reset": function() { m_elapsedTime = 0.0; },
 				"isRunning": function() { return m_isRunning; },
 				"getBufferSize": function() { return m_scriptNode.bufferSize; },
