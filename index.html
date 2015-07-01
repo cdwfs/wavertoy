@@ -20,6 +20,12 @@
 		</style>
 	</head>
 	<body>
+
+		<!-- Waveform Display -->
+		<canvas id="waveformCanvas" width="100" height="300"
+			style="border:1px solid black">
+			Waveform display is not supported by your browser.
+		</canvas>
 		
 		<!-- Editor -->
 		<pre id="editor" style="font-size:18px">
@@ -340,94 +346,85 @@ right = sample;</div>
 			<LI>UI controls for:<UL>
 				<LI>Audio buffer size</LI>
 			</UL></LI>
-			<LI>Replace WebGL waveform with HTML5 canvas</LI>
 			<LI>Error reporting (syntax error, failure to set left/right, etc.)</LI>
 		</UL>
 		
 		<!-- Waveform display -->
-		<script src="lib/Detector.js"></script>
-		<script src="lib/three.min.js"></script>
 		<script>
 		var waveDisplay = function() {
 			"use strict";
-			
-			var scene, camera, renderer, waveLObj, waveRObj;
+			var canvas, ctx;
 			function init() {
-				if (!Detector.webgl) {
-					Detector.addGetWebGLMessage();
-				}
-				
-				scene = new THREE.Scene();
-				
-				camera = new THREE.OrthographicCamera(-1, 1, 1, -1, -1, 1);
-				
-				renderer = new THREE.WebGLRenderer();
-				renderer.setClearColor(0x000000, 1.0);
-				renderer.setSize(window.innerWidth*0.9, 300);
-
-				var zeroLGeom = new THREE.Geometry();
-				zeroLGeom.vertices.push( new THREE.Vector3(-1,  0.5, -0.5) );
-				zeroLGeom.vertices.push( new THREE.Vector3( 1,  0.5, -0.5) );
-				var zeroRGeom = new THREE.Geometry();
-				zeroRGeom.vertices.push( new THREE.Vector3(-1, -0.5, -0.5) );
-				zeroRGeom.vertices.push( new THREE.Vector3( 1, -0.5, -0.5) );
-				var zeroMat = new THREE.LineBasicMaterial({color:0x4040C0});
-				scene.add( new THREE.Line(zeroLGeom, zeroMat) );
-				scene.add( new THREE.Line(zeroRGeom, zeroMat) );
-				
-				var waveMat = new THREE.LineBasicMaterial({color: 0xFFFFFF});
-				var iVert;
-				var waveLGeom = new THREE.Geometry();
-				for(iVert=0; iVert<waver.getBufferSize(); iVert+=1) {
-					var vertX = (iVert/waver.getBufferSize()) * 2.0 - 1.0;
-					waveLGeom.vertices.push( new THREE.Vector3(vertX, 0, 0));
-				}
-				waveLObj = new THREE.Line(waveLGeom, waveMat);
-				waveLObj.translateY(0.5);
-				waveLObj.scale.y = 0.5;
-				waveLObj.name = "waveL";
-				scene.add(waveLObj);
-				
-				var waveRGeom = new THREE.Geometry();
-				for(iVert=0; iVert<waver.getBufferSize(); iVert+=1) {
-					var vertX = (iVert/waver.getBufferSize()) * 2.0 - 1.0;
-					waveRGeom.vertices.push( new THREE.Vector3(vertX, 0, 0));
-				}
-				waveRObj = new THREE.Line(waveRGeom, waveMat);
-				waveRObj.translateY(-0.5);
-				waveRObj.scale.y = 0.5;
-				waveRObj.name = "waveR";
-				scene.add(waveRObj);
-				
-				document.body.insertBefore(renderer.domElement, document.body.firstChild);
-				render();			
+				canvas = document.querySelector("#waveformCanvas");
+				ctx = canvas.getContext("2d");
+				ctx.canvas.width = window.innerWidth * 0.9;
+				ctx.save();
+				ctx.fillStyle = "black";
+				ctx.fillRect(0,0, ctx.canvas.width,ctx.canvas.height);
+				ctx.restore();
+				render();
 			}
-			
 			function render() {
-				var iVert;
-				var vertsL = waveLObj.geometry.vertices;
-				var vertsR = waveRObj.geometry.vertices;
+				ctx.canvas.width = window.innerWidth * 0.9;
+
+				ctx.save();
+				// clear
+				ctx.fillStyle = "black";
+				ctx.fillRect(0,0, ctx.canvas.width,ctx.canvas.height);
+				// Zero axes
+				var waveScale = ctx.canvas.height * 0.25;
+				var zeroYL = waveScale * 1;
+				var zeroYR = waveScale * 3;
+				ctx.beginPath();
+				ctx.moveTo(0,                zeroYL);
+				ctx.lineTo(ctx.canvas.width, zeroYL);
+				ctx.moveTo(0,                zeroYR);
+				ctx.lineTo(ctx.canvas.width, zeroYR);
+				ctx.strokeStyle = "rgb(64,64,192)";
+				ctx.stroke();
+				// waves
 				if (waver.isRunning()) {
+					var iSamp;
 					var samples = waver.getSamples();
-					for(iVert=0; iVert < vertsL.length; iVert += 1) {
-						vertsL[iVert].y = samples.left[iVert];
-						vertsR[iVert].y = samples.right[iVert];
+					var dx = ctx.canvas.width / (samples.left.length-1);
+					// left channel
+					ctx.beginPath();
+					ctx.moveTo(dx*0, zeroYL + waveScale*samples.left[0]);
+					for(iSamp=1; iSamp<samples.left.length; iSamp += 1) {
+						ctx.lineTo(dx*iSamp, zeroYL + waveScale*samples.left[iSamp]);
 					}
+					ctx.strokeStyle = 'yellow';
+					ctx.stroke();
+					// right channel
+					ctx.beginPath();
+					ctx.moveTo(dx*0, zeroYR + waveScale*samples.right[0]);
+					for(iSamp=1; iSamp<samples.right.length; iSamp += 1) {
+						ctx.lineTo(dx*iSamp, zeroYR + waveScale*samples.right[iSamp]);
+					}
+					ctx.strokeStyle = 'yellow';
+					ctx.stroke();
 				} else {
-					for(iVert=0; iVert < vertsL.length; iVert += 1) {
-						vertsL[iVert].y *= 0.5;
-						vertsR[iVert].y *= 0.5;
-					}
+					ctx.beginPath();
+					ctx.moveTo(0,                zeroYL);
+					ctx.lineTo(ctx.canvas.width, zeroYL);
+					ctx.moveTo(0,                zeroYR);
+					ctx.lineTo(ctx.canvas.width, zeroYR);
+					ctx.strokeStyle = "yellow";
+					ctx.stroke();
 				}
-				waveLObj.geometry.verticesNeedUpdate = true;
-				waveRObj.geometry.verticesNeedUpdate = true;
-				
-				renderer.render(scene, camera);
+					
+				ctx.restore();
 				requestAnimationFrame(render);
 			}
-			
-			window.onload = init;		
+			function makeDoubleDelegate(f1,f2) {
+				return function(){
+					if (f1) f1();
+					if (f2) f2();
+				}
+			}
+			window.onload = makeDoubleDelegate(window.onload, init);
 		}();
 		</script>
+
 	</body>
 </html>
