@@ -17,15 +17,22 @@
 			color: #FFFF00;
 			background-color: #202020;
 		}
+		#waveformCanvasDiv {
+			width: 90%;
+			margin-left: 10px;
+			margin-right: 10px;
+		}
 		</style>
 	</head>
 	<body>
 
 		<!-- Waveform Display -->
-		<canvas id="waveformCanvas" width="100" height="300"
-			style="border:1px solid black">
-			Waveform display is not supported by your browser.
-		</canvas>
+		<div id="waveformCanvasDiv">
+			<canvas id="waveformCanvas" width="100" height="300"
+				style="border:1px solid black">
+				Waveform display is not supported by your browser.
+			</canvas>
+		</div>
 		
 		<!-- Editor -->
 		<pre id="editor" style="font-size:18px">
@@ -370,8 +377,11 @@ right = sample;</div>
 				ctx.restore();
 				render();
 			}
-			function onWindowResize() {
-				ctx.canvas.width = window.innerWidth * 0.9;
+			function onWindowResize(event) {
+				var canvasDiv = document.getElementById("waveformCanvasDiv");
+				if (canvasDiv) {
+					ctx.canvas.width = canvasDiv.offsetWidth;
+				}
 			}
 			window.addEventListener('resize', onWindowResize, false);
 			function render(timeStamp) {
