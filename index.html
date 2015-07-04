@@ -37,38 +37,42 @@ right = sample;</pre>
 
 		<script src="lib/src-min-noconflict/ace.js" charset="utf-8"></script>
 		<script>
-		var editor = ace.edit("editor");
-		editor.$blockScrolling = Infinity;
-		editor.setTheme("ace/theme/xcode");
-		editor.getSession().setMode("ace/mode/javascript");
-		editor.commands.addCommand({
-			name: "runSound",
-			bindKey: {win: "Ctrl-Enter", mac: "Command-Enter"},
-			exec: function(editor) {
-				//console.log("running!");
-				waver.start();
-			}
-		});
-		editor.commands.addCommand({
-			name: "stopSound",
-			bindKey: {win: "Ctrl-Space", mac: "Command-Space"},
-			exec: function(editor) {
-				//console.log("stopping!");
-				waver.stop();
-			}
-		});
-		// add command to lazy-load keybinding_menu extension
-		editor.commands.addCommand({
-			name: "showKeyboardShortcuts",
-			bindKey: {win: "Ctrl-Alt-h", mac: "Command-Alt-h"},
-			exec: function(editor) {
-				console.log("helping!");
-				ace.config.loadModule("ace/ext/keybinding_menu", function(module) {
-					module.init(editor);
-					editor.showKeyboardShortcuts()
-				})
-			}
-		});
+		var editor = function() {
+			"use strict";
+			var editor = ace.edit("editor");
+			editor.$blockScrolling = Infinity;
+			editor.setTheme("ace/theme/xcode");
+			editor.getSession().setMode("ace/mode/javascript");
+			editor.commands.addCommand({
+				name: "runSound",
+				bindKey: {win: "Ctrl-Enter", mac: "Command-Enter"},
+				exec: function(editor) {
+					//console.log("running!");
+					waver.start();
+				}
+			});
+			editor.commands.addCommand({
+				name: "stopSound",
+				bindKey: {win: "Ctrl-Space", mac: "Command-Space"},
+				exec: function(editor) {
+					//console.log("stopping!");
+					waver.stop();
+				}
+			});
+			// add command to lazy-load keybinding_menu extension
+			editor.commands.addCommand({
+				name: "showKeyboardShortcuts",
+				bindKey: {win: "Ctrl-Alt-h", mac: "Command-Alt-h"},
+				exec: function(editor) {
+					console.log("helping!");
+					ace.config.loadModule("ace/ext/keybinding_menu", function(module) {
+						module.init(editor);
+						editor.showKeyboardShortcuts()
+					})
+				}
+			});
+			return editor;
+		}();
 		</script>
 		
 		<!-- Audio generator -->
