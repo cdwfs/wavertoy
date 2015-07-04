@@ -17,15 +17,22 @@
 			color: #FFFF00;
 			background-color: #202020;
 		}
+		#waveformCanvasDiv {
+			width: 90%;
+			margin-left: 10px;
+			margin-right: 10px;
+		}
 		</style>
 	</head>
 	<body>
 
 		<!-- Waveform Display -->
-		<canvas id="waveformCanvas" width="100" height="300"
-			style="border:1px solid black">
-			Waveform display is not supported by your browser.
-		</canvas>
+		<div id="waveformCanvasDiv">
+			<canvas id="waveformCanvas" width="100" height="300"
+				style="border:1px solid black">
+				Waveform display is not supported by your browser.
+			</canvas>
+		</div>
 		
 		<!-- Editor -->
 		<pre id="editor" style="font-size:18px">
@@ -71,6 +78,7 @@ right = sample;</pre>
 					})
 				}
 			});
+			editor.focus();
 			return editor;
 		}();
 		</script>
@@ -162,11 +170,10 @@ right = sample;</pre>
 						alert(e.name + "\n" + e.message);
 						m_sampleGen = oldFunc;
 					}
-					this.reset();
+					m_elapsedTime = 0.0;
 					m_isRunning = true;
 				},
 				"stop": function() { m_isRunning = false; },
-				"reset": function() { m_elapsedTime = 0.0; },
 				"isRunning": function() { return m_isRunning; },
 				"getBufferSize": function() { return m_scriptNode.bufferSize; },
 				"getSamples": function() { return m_samplesCopy; }
@@ -174,10 +181,14 @@ right = sample;</pre>
 		}();
 		</script>
 		<form name="soundCode"> 
-			<input type="button" value="Run (ctrl-Enter)" onClick="waver.start();"/>
-			<input type="button" value="Stop (ctrl-Space)" onClick="waver.stop();"/>
+			<input type="button" value="Run (ctrl-Enter)" id="runButton"/>
+			<input type="button" value="Stop (ctrl-Space)" id="stopButton"/>
 			Gain: <input type="range" min="0" max="100" value="50" name="gainSlider"/>
 		</form>
+		<script>
+		document.querySelector("#runButton").addEventListener("click", waver.start, false);
+		document.querySelector("#stopButton").addEventListener("click", waver.stop, false);
+		</script>
 		<H2>Help</H2>
 		<P>Use the editor to write Javascript code to generate an audio signal in real time.</P>
 		<P>The following built-in variables are available:
@@ -369,11 +380,14 @@ right = sample;</div>
 				ctx.restore();
 				render();
 			}
-			function onWindowResize() {
-				ctx.canvas.width = window.innerWidth * 0.9;
+			function onWindowResize(event) {
+				var canvasDiv = document.getElementById("waveformCanvasDiv");
+				if (canvasDiv) {
+					ctx.canvas.width = canvasDiv.offsetWidth;
+				}
 			}
 			window.addEventListener('resize', onWindowResize, false);
-			function render() {
+			function render(timeStamp) {
 				ctx.save();
 				// clear
 				ctx.fillStyle = enableMotionBlur ?
