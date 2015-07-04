@@ -373,7 +373,7 @@ right = sample;</div>
 				ctx.canvas.width = window.innerWidth * 0.9;
 			}
 			window.addEventListener('resize', onWindowResize, false);
-			function render() {
+			function render(timeStamp) {
 				ctx.save();
 				// clear
 				ctx.fillStyle = enableMotionBlur ?
