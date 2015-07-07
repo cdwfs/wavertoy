@@ -150,7 +150,7 @@ right = sample;</pre>
 						}
 						return;
 					}
-					var gain = document.getElementsByName("gainSlider")[0].value * 0.01;
+					var gain = document.getElementById("gainSlider").value * 0.01;
 					for (var iSamp=0; iSamp<this.bufferSize; iSamp += 1) {
 						var samples = m_sampleGen(m_elapsedTime);
 						m_samplesCopy.left[iSamp] = leftChan[iSamp] = samples[0] * gain;
@@ -183,7 +183,7 @@ right = sample;</pre>
 		<form name="soundCode"> 
 			<input type="button" value="Run (ctrl-Enter)" id="runButton"/>
 			<input type="button" value="Stop (ctrl-Space)" id="stopButton"/>
-			Gain: <input type="range" min="0" max="100" value="50" name="gainSlider"/>
+			<label for="gainSlider">Gain:</label><input id="gainSlider" type="range" min="0" max="100" value="50"/>
 		</form>
 		<script>
 		document.querySelector("#runButton").addEventListener("click", waver.start, false);
