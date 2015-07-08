@@ -180,11 +180,9 @@ right = sample;</pre>
 			};
 		}();
 		</script>
-		<form name="soundCode"> 
-			<input type="button" value="Run (ctrl-Enter)" id="runButton"/>
-			<input type="button" value="Stop (ctrl-Space)" id="stopButton"/>
-			<label for="gainSlider">Gain:</label><input id="gainSlider" type="range" min="0" max="100" value="50"/>
-		</form>
+		<input type="button" value="Run (ctrl-Enter)" id="runButton"/>
+		<input type="button" value="Stop (ctrl-Space)" id="stopButton"/>
+		<label for="gainSlider">Gain:</label><input id="gainSlider" type="range" min="0" max="100" value="50"/>
 		<script>
 		document.querySelector("#runButton").addEventListener("click", waver.start, false);
 		document.querySelector("#stopButton").addEventListener("click", waver.stop, false);
