@@ -182,8 +182,16 @@ right = sample;</pre>
 		</script>
 		<input type="button" value="Run (ctrl-Enter)" id="runButton"/>
 		<input type="button" value="Stop (ctrl-Space)" id="stopButton"/>
-		<label for="gainSlider">Gain:</label><input id="gainSlider" type="range" min="0" max="100" value="50"/>
+		<label for="gainSlider">Gain:</label>
+		<input id="gainSlider" type="range" min="0" max="100" value="50"
+			onmouseup="localStorage.gain=this.value;"
+			oninput="gainSliderOutput.value = this.value;"/>
+		<output for="gainSlider" id="gainSliderOutput"
+			style="border:1px solid black; padding: 2px;">50</output>
 		<script>
+		"use strict";
+		document.querySelector("#gainSlider").value = localStorage.getItem("gain") || 50;
+		document.querySelector("#gainSliderOutput").value = document.querySelector("#gainSlider").value;
 		document.querySelector("#runButton").addEventListener("click", waver.start, false);
 		document.querySelector("#stopButton").addEventListener("click", waver.stop, false);
 		</script>
