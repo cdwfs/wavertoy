@@ -126,6 +126,7 @@ right = sample;</pre>
              }
              function init() {
                  m_audioCtx = new AudioContext();
+
                  m_analyserNodes = {
                      left:  m_audioCtx.createAnalyser(),
                      right: m_audioCtx.createAnalyser(),
@@ -255,8 +256,8 @@ right = sample;</pre>
         
         <P><B>Basic Wave Generation</B><BR>Let's start with the simplest example possible: a sine wave:</P>
         <div translate="no" class="code">var sample = sin(time);
-            left = sample;
-            right = sample;</div>
+left = sample;
+right = sample;</div>
         
         <p>The resulting wave undergoes a single cycle once every 2*PI
             (=6.28...) seconds. This gives a frequency of 1/6.28 = 0.159
@@ -266,16 +267,16 @@ right = sample;</pre>
             multiplying the time by 2*PI:</p>
         
         <div translate="no" class="code">var sample = sin(2*PI*time);
-            left = sample;
-            right = sample;</div>
+left = sample;
+right = sample;</div>
 
         <p>Next, we declare a <tt>freq</tt> variable to store the desired
             wave frequency. We'll start at 1.0 for now:</p>
 
         <div translate="no" class="code">var freqHz = 1.0;
-            var sample = sin(freqHz * 2*PI*time);
-            left = sample;
-            right = sample;</div>
+var sample = sin(freqHz * 2*PI*time);
+left = sample;
+right = sample;</div>
 
         <p>This is still inaudible, but if we increase the value of
             freqHz, we should eventually start to hear a low bass hum
@@ -283,9 +284,9 @@ right = sample;</pre>
             orchestras tune to (A above middle C) is 440Hz.</p>
         
         <div translate="no" class="code">var freqHz = 20.0;
-            var sample = sin(freqHz * 2*PI*time);
-            left = sample;
-            right = sample;</div>
+var sample = sin(freqHz * 2*PI*time);
+left = sample;
+right = sample;</div>
         
         <p><B>Adding Rhythm</B><BR>We can add a decay to the sound by scaling the sample
             values by <tt>exp(-x)</tt>. At x=0, <tt>exp(0)</tt> returns
@@ -294,10 +295,10 @@ right = sample;</pre>
             <tt>exp()</tt>, we get a longer or shorter decay.</p>
 
         <div translate="no" class="code">var freqHz = 440.0; // higher value -> higher pitch
-            var decaySpeed = 4.0; // higher value -> faster decay (shorter notes)
-            var sample = sin(freqHz * 2*PI*time) * exp(-decaySpeed*time);
-            left = sample;
-            right = sample;</div>
+var decaySpeed = 4.0; // higher value -> faster decay (shorter notes)
+var sample = sin(freqHz * 2*PI*time) * exp(-decaySpeed*time);
+left = sample;
+right = sample;</div>
 
         <p>Now let's add some rhythm to the sound. Instead of passing
             <tt>time</tt> directory to <tt>exp()</tt>, we use <tt>fract()</tt> to
@@ -308,22 +309,22 @@ right = sample;</pre>
             familiar unit like beats per minute (bpm).</p>
 
         <div translate="no" class="code">var freqHz = 440.0; // higher value -> higher pitch
-            var decaySpeed = 4.0; // higher value -> faster decay (shorter notes)
-            var tempoBpm = 60; // higher value -> faster rhythm
-            var sample = sin(freqHz * 2*PI*time) * exp(-decaySpeed*fract(tempoBpm/60 * time));
-            left = sample;
-            right = sample;</div>
+var decaySpeed = 4.0; // higher value -> faster decay (shorter notes)
+var tempoBpm = 60; // higher value -> faster rhythm
+var sample = sin(freqHz * 2*PI*time) * exp(-decaySpeed*fract(tempoBpm/60 * time));
+left = sample;
+right = sample;</div>
 
         <p><B>Advanced Wave Generation</B><BR>Sine waves are boring. Let's generate a more interesting
             waveform, like a square wave. First let's pull the wave
             generator into its own function.</p>
         <div translate="no" class="code">var freqHz = 440.0; // higher value -> higher pitch
-            var decaySpeed = 4.0; // higher value -> faster decay (shorter notes)
-            var tempoBpm = 60; // higher value -> faster rhythm
-            function waveSine(freq,t) { return sin(freq * 2*PI*t); }
-            var sample = waveSine(freqHz,time) * exp(-decaySpeed*fract(tempoBpm/60 * time));
-            left = sample;
-            right = sample;</div>
+var decaySpeed = 4.0; // higher value -> faster decay (shorter notes)
+var tempoBpm = 60; // higher value -> faster rhythm
+function waveSine(freq,t) { return sin(freq * 2*PI*t); }
+var sample = waveSine(freqHz,time) * exp(-decaySpeed*fract(tempoBpm/60 * time));
+left = sample;
+right = sample;</div>
 
         <p>We can build a square wave a few different ways. The first
             uses <A HREF="http://en.wikipedia.org/wiki/Fourier_analysis" >Fourier analysis</A> to
@@ -335,22 +336,22 @@ right = sample;</pre>
             50 for a pretty good approximation of a square wave.</p>
         
         <div translate="no" class="code">var freqHz = 440.0; // higher value -> higher pitch
-            var decaySpeed = 4.0; // higher value -> faster decay (shorter notes)
-            var tempoBpm = 60; // higher value -> faster rhythm
-            function waveSine(freq,t) { return sin(freq * 2*PI*t); }
-            function waveSquare(freq,t) {
-            var sample=0;
-            var numHarmonics=1; // higher values -> better approximation
-            var iHarm;
-            for(iHarm=0; iHarm&ltnumHarmonics; iHarm += 1) {
-            sample += sin(freq * (2*iHarm+1)*2*PI*t) / (2*iHarm+1);
-            }
-            sample *= 4/PI;
-            return sample;
-            }
-            var sample = waveSquare(freqHz,time) * exp(-decaySpeed*fract(tempoBpm/60 * time));
-            left = sample;
-            right = sample;</div>
+var decaySpeed = 4.0; // higher value -> faster decay (shorter notes)
+var tempoBpm = 60; // higher value -> faster rhythm
+function waveSine(freq,t) { return sin(freq * 2*PI*t); }
+function waveSquare(freq,t) {
+    var sample=0;
+    var numHarmonics=1; // higher values -> better approximation
+    var iHarm;
+    for(iHarm=0; iHarm&ltnumHarmonics; iHarm += 1) {
+        sample += sin(freq * (2*iHarm+1)*2*PI*t) / (2*iHarm+1);
+    }
+    sample *= 4/PI;
+    return sample;
+}
+var sample = waveSquare(freqHz,time) * exp(-decaySpeed*fract(tempoBpm/60 * time));
+left = sample;
+right = sample;</div>
         
         <p>...or we could just take the high road, and observe
             that it's quicker and easier to generate a perfect square
@@ -359,52 +360,50 @@ right = sample;</pre>
             about!</p>
 
         <div translate="no" class="code">var freqHz = 440.0; // higher value -> higher pitch
-            var decaySpeed = 4.0; // higher value -> faster decay (shorter notes)
-            var tempoBpm = 60; // higher value -> faster rhythm
-            function waveSine(freq,t) { return sin(freq * 2*PI*t); }
-            function waveSquare(freq,t) { return sign( sin(freq * 2*PI*t) ); }
-            var sample = waveSquare(freqHz,time) * exp(-decaySpeed*fract(tempoBpm/60 * time));
-            left = sample;
-            right = sample;</div>
+var decaySpeed = 4.0; // higher value -> faster decay (shorter notes)
+var tempoBpm = 60; // higher value -> faster rhythm
+function waveSine(freq,t) { return sin(freq * 2*PI*t); }
+function waveSquare(freq,t) { return sign( sin(freq * 2*PI*t) ); }
+var sample = waveSquare(freqHz,time) * exp(-decaySpeed*fract(tempoBpm/60 * time));
+left = sample;
+right = sample;</div>
 
         <P><B>Phase Modulation</B><BR>Another way we can change the timbre of our waveform is to use a technique called <A HREF="http://en.wikipedia.org/Phase_modulation">phase modulation</A>. We start by adding a second sine wave as an offset to the parameter of the main sine wave, with a scale factor called the "modulation index". Try increasing the modulation index to hear the difference in the resulting tone.</P>
 
         <div translate="no" class="code">var freqHz = 440.0; // higher value -> higher pitch
-            var decaySpeed = 4.0; // higher value -> faster decay (shorter notes)
-            var tempoBpm = 60; // higher value -> faster rhythm
-            var modulationIndex = 1.0;
-            var sample = sin(freqHz * 2*PI*time + modulationIndex*sin(freqHz * 2*PI*time))
-            * exp(-decaySpeed*fract(tempoBpm/60 * time));
-            left = sample;
-            right = sample;</div>
+var decaySpeed = 4.0; // higher value -> faster decay (shorter notes)
+var tempoBpm = 60; // higher value -> faster rhythm
+var modulationIndex = 1.0;
+var sample = sin(freqHz * 2*PI*time + modulationIndex*sin(freqHz * 2*PI*time))
+* exp(-decaySpeed*fract(tempoBpm/60 * time));
+left = sample;
+right = sample;</div>
 
         <P>...and once you have a modulation index, the obvious next step is to modulate it (with yet ANOTHER sine wave). As usual, try playing with the constants to see what effect they have on the output.</P>
 
         <div translate="no" class="code">var freqHz = 220.0; // higher value -> higher pitch
-            var decaySpeed = 4.0; // higher value -> faster decay (shorter notes)
-            var tempoBpm = 60; // higher value -> faster rhythm
-            var modulationIndex = 10.0 + 15.0*sin(3.0*time);
-            var sample = sin(freqHz * 2*PI*time + modulationIndex*sin(freqHz * 2*PI*time))
-            * exp(-decaySpeed*fract(tempoBpm/60 * time));
-            left = sample;
-            right = sample;</div>
+var decaySpeed = 4.0; // higher value -> faster decay (shorter notes)
+var tempoBpm = 60; // higher value -> faster rhythm
+var modulationIndex = 10.0 + 15.0*sin(3.0*time);
+var sample = sin(freqHz * 2*PI*time + modulationIndex*sin(freqHz * 2*PI*time))
+* exp(-decaySpeed*fract(tempoBpm/60 * time));
+left = sample;
+right = sample;</div>
 
 
         
         <H2>Examples:</H2>
         <div translate="no" class="code">var modulationIndex = 10*sin(time);
-            var freqHz = 220;
-            var drumDistortion = 1000.0;
-            var phaseOffset = modulationIndex * sin(freqHz * 2*PI*time);
-            var sample = sin(freqHz * 2*PI*time + phaseOffset) * exp(-4.0*fract(4*time));
-
-            var kick = clamp( drumDistortion*sin(  100*exp( -10*fract(2.0*time      ))), -1, 1);
-            var hat  = clamp( drumDistortion*sin( 1000*exp(-100*fract(2.0*time + 0.5))), -1, 1);
-            sample += kick;
-            sample += hat;
-
-            left = sample;
-            right = sample;</div>
+var freqHz = 220;
+var drumDistortion = 1000.0;
+var phaseOffset = modulationIndex * sin(freqHz * 2*PI*time);
+var sample = sin(freqHz * 2*PI*time + phaseOffset) * exp(-4.0*fract(4*time));
+var kick = clamp( drumDistortion*sin(  100*exp( -10*fract(2.0*time      ))), -1, 1);
+var hat  = clamp( drumDistortion*sin( 1000*exp(-100*fract(2.0*time + 0.5))), -1, 1);
+sample += kick;
+sample += hat;
+left = sample;
+right = sample;</div>
         
         <H2>TODO:</H2>
         <UL>
