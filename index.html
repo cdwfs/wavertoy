@@ -1,279 +1,324 @@
 <!doctype html>
 <html lang="en">
-	<head>
-		<title>Wavertoy</title>
-		<meta charset="utf-8"/>
-		<style type="text/css" media="screen">
-		#editor {
-			margin: 0;
-			position: relative !important;
-			width: 90%;
-			height: 300px;
-		}
-		div.code {
-			font-family: monospace;
-			white-space: pre;
-			padding: 10px;
-			color: #FFFF00;
-			background-color: #202020;
-		}
-		#waveformCanvasDiv {
-			width: 90%;
-			margin-left: 10px;
-			margin-right: 10px;
-		}
-		</style>
-	</head>
-	<body>
+    <head>
+        <title>Wavertoy</title>
+        <meta charset="utf-8"/>
+        <style type="text/css" media="screen">
+         #editor {
+             margin: 0;
+             position: relative !important;
+             width: 90%;
+             height: 300px;
+         }
+         div.code {
+             font-family: monospace;
+             white-space: pre;
+             padding: 10px;
+             color: #FFFF00;
+             background-color: #202020;
+         }
+         #waveformCanvasDiv {
+             width: 90%;
+             margin-left: 10px;
+             margin-right: 10px;
+         }
+        </style>
+    </head>
+    <body>
 
-		<!-- Waveform Display -->
-		<div id="waveformCanvasDiv">
-			<canvas id="waveformCanvas" width="100" height="300"
-				style="border:1px solid black">
-				Waveform display is not supported by your browser.
-			</canvas>
-		</div>
-		
-		<!-- Editor -->
-		<pre id="editor" style="font-size:18px">
+        <!-- Waveform/Spectrum Display -->
+        <div id="waveformCanvasDiv">
+            <canvas id="waveformCanvas" width="100" height="300"
+                    style="border:1px solid black">
+                Waveform display is not supported by your browser.
+            </canvas>
+            <canvas id="spectrumCanvas" width="100" height="300"
+                    style="border:1px solid black">
+                Spectrum display is not supported by your browser.
+            </canvas>
+        </div>
+        
+        <!-- Editor -->
+        <pre id="editor" style="font-size:18px">
 // Generate samples based on the "time" parameter.
 var sample = sin(220.0 * 2*PI*time);
 // Store final sample values in the "left" and "right" variables.
 left = sample;
 right = sample;</pre>
 
-		<script src="lib/src-min-noconflict/ace.js" charset="utf-8"></script>
-		<script>
-		var editor = function() {
-			"use strict";
-			var editor = ace.edit("editor");
-			editor.$blockScrolling = Infinity;
-			editor.setTheme("ace/theme/xcode");
-			editor.getSession().setMode("ace/mode/javascript");
-			editor.commands.addCommand({
-				name: "runSound",
-				bindKey: {win: "Ctrl-Enter", mac: "Command-Enter"},
-				exec: function(editor) {
-					//console.log("running!");
-					waver.start();
-				}
-			});
-			editor.commands.addCommand({
-				name: "stopSound",
-				bindKey: {win: "Ctrl-Space", mac: "Command-Space"},
-				exec: function(editor) {
-					//console.log("stopping!");
-					waver.stop();
-				}
-			});
-			// add command to lazy-load keybinding_menu extension
-			editor.commands.addCommand({
-				name: "showKeyboardShortcuts",
-				bindKey: {win: "Ctrl-Alt-h", mac: "Command-Alt-h"},
-				exec: function(editor) {
-					console.log("helping!");
-					ace.config.loadModule("ace/ext/keybinding_menu", function(module) {
-						module.init(editor);
-						editor.showKeyboardShortcuts()
-					})
-				}
-			});
-			editor.focus();
-			return editor;
-		}();
-		</script>
-		
-		<!-- Audio generator -->
-		<script>
-		var abs   = function(x) { return Math.abs(x);   };
-		var sign  = function(x) { return Math.sign(x);  };
-		var sqrt  = function(x) { return Math.sqrt(x);  };
-		var cbrt  = function(x) { return Math.cbrt(x);  };
-		var min   = function(x,y) { return Math.min(x,y);   };
-		var max   = function(x,y) { return Math.max(x,y);   };
-		var clamp = function(x,minX,maxX) { return Math.min(maxX, Math.max(minX,x)); }
-		var ceil  = function(x) { return Math.ceil(x);  };
-		var floor = function(x) { return Math.floor(x); };
-		var trunc = function(x) { return Math.trunc(x); };
-		var fract = function(x) { return x-Math.floor(x); };
-		var log   = function(x) { return Math.log(x);   };
-		var log10 = function(x) { return Math.log10(x); };
-		var exp   = function(x) { return Math.exp(x);   };
-		var pow   = function(x) { return Math.pow(x);   }
-		var sin   = function(x) { return Math.sin(x);   };
-		var cos   = function(x) { return Math.cos(x);   };
-		var tan   = function(x) { return Math.tan(x);   };
-		var asin  = function(x) { return Math.asin(x);  };
-		var acos  = function(x) { return Math.acos(x);  };
-		var atan  = function(x) { return Math.atan(x);  };
-		var atan2 = function(y,x) { return Math.atan2(y,x); };
-		var PI = Math.PI;
-		var waver = function() {
-			"use strict";
-			var m_elapsedTime, m_scriptNode, m_isRunning, m_sampleGen, m_audioCtx, m_updateCode;
-			var m_samplesCopy;
-			function init() {
-				m_audioCtx = new AudioContext();
-				var sampleBufferSize = 1024;
-				var inputChannelCount = 0;
-				var outputChannelCount = 2;
-				m_scriptNode = m_audioCtx.createScriptProcessor(sampleBufferSize,
-					inputChannelCount, outputChannelCount);
-				m_samplesCopy = {
-					left: new Float32Array(sampleBufferSize),
-					right: new Float32Array(sampleBufferSize)
-				};
-				var secondsPerSample = 1.0 / m_audioCtx.sampleRate;
-				m_isRunning = false;
-				m_elapsedTime = 0;
-				
-				m_sampleGen = function(time) { return [0,0] };
-				m_updateCode = function() {
-					m_sampleGen = new Function('time',
-						'"use strict";\n'
-						//+ 'try {\n'
-							+ 'var left = 0;\n'
-							+ 'var right = 0;\n'
-							+ editor.getValue()
-							+ 'return [left,right];\n'
-						//+ '} catch(e) { alert(e.message); }\n'
-					);
-				};
-				m_scriptNode.onaudioprocess = function(audioProcessingEvent) {
-					var outputBuffer = audioProcessingEvent.outputBuffer;
-					var leftChan  = outputBuffer.getChannelData(0);
-					var rightChan = outputBuffer.getChannelData(1);
-					if (!m_isRunning) {
-						for (var iSamp=0; iSamp<this.bufferSize; iSamp += 1) {
-							m_samplesCopy.left[iSamp] = leftChan[iSamp] = 0;
-							m_samplesCopy.right[iSamp] = rightChan[iSamp] = 0;
-						}
-						return;
-					}
-					var gain = document.getElementById("gainSlider").value * 0.01;
-					for (var iSamp=0; iSamp<this.bufferSize; iSamp += 1) {
-						var samples = m_sampleGen(m_elapsedTime);
-						m_samplesCopy.left[iSamp] = leftChan[iSamp] = samples[0] * gain;
-						m_samplesCopy.right[iSamp] = rightChan[iSamp] = samples[1] * gain;
-						m_elapsedTime += secondsPerSample;
-					}
-				};
-				m_scriptNode.connect(m_audioCtx.destination);
-			}
-			init();
-			return {
-				"start": function() {
-					var oldFunc = m_sampleGen;
-					try {
-						m_updateCode();
-					} catch(e) {
-						alert(e.name + "\n" + e.message);
-						m_sampleGen = oldFunc;
-					}
-					m_elapsedTime = 0.0;
-					m_isRunning = true;
-				},
-				"stop": function() { m_isRunning = false; },
-				"isRunning": function() { return m_isRunning; },
-				"getBufferSize": function() { return m_scriptNode.bufferSize; },
-				"getSamples": function() { return m_samplesCopy; }
-			};
-		}();
-		</script>
-		<input type="button" value="Run (ctrl-Enter)" id="runButton"/>
-		<input type="button" value="Stop (ctrl-Space)" id="stopButton"/>
-		<label for="gainSlider">Gain:</label>
-		<input id="gainSlider" type="range" min="0" max="100" value="50"
-			onmouseup="localStorage.gain=this.value;"
-			oninput="gainSliderOutput.value = this.value;"/>
-		<output for="gainSlider" id="gainSliderOutput"
-			style="border:1px solid black; padding: 2px;">50</output>
-		<script>
-		"use strict";
-		document.querySelector("#gainSlider").value = localStorage.getItem("gain") || 50;
-		document.querySelector("#gainSliderOutput").value = document.querySelector("#gainSlider").value;
-		document.querySelector("#runButton").addEventListener("click", waver.start, false);
-		document.querySelector("#stopButton").addEventListener("click", waver.stop, false);
-		</script>
-		<H2>Help</H2>
-		<P>Use the editor to write Javascript code to generate an audio signal in real time.</P>
-		<P>The following built-in variables are available:
-			<UL>
-				<LI><TT><B>time</B></TT> [input] -- elapsed time in seconds</LI>
-				<LI><TT><B>left</B></TT> [output] -- store the sample value for the left channel here. Range is [-1.0...1.0].</LI>
-				<LI><TT><B>right</B></TT> [output] -- store the sample value for the right channel here. Range is [-1.0...1.0].</LI>
-			</UL>
-			For the sake of convenience, the following Math functions are defined at the global scope (no "Math." prefix required:
-			<TT><B>PI, abs(x), sign(x), sqrt(x), cbrt(x), min(x), max(x), clamp(x,minX,maxX), ceil(x), floor(x), trunc(x), fract(x), log(x), log10(x),
-				exp(x), pow(x), sin(x), cos(x), tan(x), asin(x), acos(x), atan(x), atan2(x,y)</B></TT></P>
+        <script src="lib/src-min-noconflict/ace.js" charset="utf-8"></script>
+        <script>
+         var editor = function() {
+             "use strict";
+             var editor = ace.edit("editor");
+             editor.$blockScrolling = Infinity;
+             editor.setTheme("ace/theme/xcode");
+             editor.getSession().setMode("ace/mode/javascript");
+             editor.commands.addCommand({
+                 name: "runSound",
+                 bindKey: {win: "Ctrl-Enter", mac: "Command-Enter"},
+                 exec: function(editor) {
+                     //console.log("running!");
+                     waver.start();
+                 }
+             });
+             editor.commands.addCommand({
+                 name: "stopSound",
+                 bindKey: {win: "Ctrl-Space", mac: "Command-Space"},
+                 exec: function(editor) {
+                     //console.log("stopping!");
+                     waver.stop();
+                 }
+             });
+             // add command to lazy-load keybinding_menu extension
+             editor.commands.addCommand({
+                 name: "showKeyboardShortcuts",
+                 bindKey: {win: "Ctrl-Alt-h", mac: "Command-Alt-h"},
+                 exec: function(editor) {
+                     console.log("helping!");
+                     ace.config.loadModule("ace/ext/keybinding_menu", function(module) {
+                         module.init(editor);
+                         editor.showKeyboardShortcuts()
+                     })
+                 }
+             });
+             editor.focus();
+             return editor;
+         }();
+        </script>
+        
+        <!-- Audio generator -->
+        <script>
+         var abs   = function(x) { return Math.abs(x);   };
+         var sign  = function(x) { return Math.sign(x);  };
+         var sqrt  = function(x) { return Math.sqrt(x);  };
+         var cbrt  = function(x) { return Math.cbrt(x);  };
+         var min   = function(x,y) { return Math.min(x,y);   };
+         var max   = function(x,y) { return Math.max(x,y);   };
+         var clamp = function(x,minX,maxX) { return Math.min(maxX, Math.max(minX,x)); }
+         var ceil  = function(x) { return Math.ceil(x);  };
+         var floor = function(x) { return Math.floor(x); };
+         var trunc = function(x) { return Math.trunc(x); };
+         var fract = function(x) { return x-Math.floor(x); };
+         var log   = function(x) { return Math.log(x);   };
+         var log10 = function(x) { return Math.log10(x); };
+         var exp   = function(x) { return Math.exp(x);   };
+         var pow   = function(x) { return Math.pow(x);   }
+         var sin   = function(x) { return Math.sin(x);   };
+         var cos   = function(x) { return Math.cos(x);   };
+         var tan   = function(x) { return Math.tan(x);   };
+         var asin  = function(x) { return Math.asin(x);  };
+         var acos  = function(x) { return Math.acos(x);  };
+         var atan  = function(x) { return Math.atan(x);  };
+         var atan2 = function(y,x) { return Math.atan2(y,x); };
+         var PI = Math.PI;
+         var waver = function() {
+             "use strict";
+             var m_elapsedTime, m_scriptNode, m_gainNode, m_analyserNodes, m_isRunning, m_sampleGen, m_audioCtx, m_updateCode;
+             var m_samplesCopy;
+             function updateGain() {
+                 var gainSlider = document.querySelector("#gainSlider");
+                 if (gainSlider) {
+                     var frac = parseInt(gainSlider.value) / parseInt(gainSlider.max);
+                     // x^2 gain sounds better than linear
+                     m_gainNode.gain.value = frac*frac;
+                 }
+             }
+             function init() {
+                 m_audioCtx = new AudioContext();
 
-		<H2>Tutorial:</H2>
-		
-		<P><B>Basic Wave Generation</B><BR>Let's start with the simplest example possible: a sine wave:</P>
-		<div translate="no" class="code">var sample = sin(time);
+                 m_analyserNodes = {
+                     left:  m_audioCtx.createAnalyser(),
+                     right: m_audioCtx.createAnalyser(),
+                     freq:  m_audioCtx.createAnalyser(),
+                 };
+
+                 m_analyserNodes.left.smoothingTimeConstant = m_analyserNodes.right.smoothingTimeConstant =  0.8;
+                 m_analyserNodes.left.minDecibels           = m_analyserNodes.right.minDecibels           = -140;
+                 m_analyserNodes.left.maxDecibels           = m_analyserNodes.right.maxDecibels           =    0;
+                 m_analyserNodes.left.fftSize               = m_analyserNodes.right.fftSize               = 2048;
+
+                 m_analyserNodes.freq.smoothingTimeConstant =  0.6;
+                 m_analyserNodes.freq.minDecibels           = -140;
+                 m_analyserNodes.freq.maxDecibels           =    0;
+                 m_analyserNodes.freq.fftSize               =  128;
+                 m_analyserNodes.freq.connect(m_audioCtx.destination);
+
+                 var splitterNode = m_audioCtx.createChannelSplitter();
+                 splitterNode.connect(m_analyserNodes.left, 0);
+                 splitterNode.connect(m_analyserNodes.right, 1);
+                 
+                 var sampleBufferSize = 1024;
+                 var inputChannelCount = 0;
+                 var outputChannelCount = 2;
+                 m_scriptNode = m_audioCtx.createScriptProcessor(sampleBufferSize,
+                                                                 inputChannelCount, outputChannelCount);
+
+                 var compressorNode = m_audioCtx.createDynamicsCompressor();
+                 compressorNode.connect(splitterNode);
+                 compressorNode.threshold.value = -24;
+                 compressorNode.connect(m_analyserNodes.freq);
+                 
+                 m_gainNode = m_audioCtx.createGain();
+                 m_gainNode.connect(compressorNode);
+                 updateGain();
+                 
+                 m_samplesCopy = {
+                     left: new Float32Array(sampleBufferSize),
+                     right: new Float32Array(sampleBufferSize)
+                 };
+                 var secondsPerSample = 1.0 / m_audioCtx.sampleRate;
+                 m_isRunning = false;
+                 m_elapsedTime = 0;
+                 
+                 m_sampleGen = function(time) { return [0,0] };
+                 m_updateCode = function() {
+                     m_sampleGen = new Function('time',
+                                                '"use strict";\n'
+                         //+ 'try {\n'
+                                              + 'var left = 0;\n'
+                                              + 'var right = 0;\n'
+                                              + editor.getValue()
+                             + 'return [left,right];\n'
+                         //+ '} catch(e) { alert(e.message); }\n'
+                     );
+                 };
+                 m_scriptNode.onaudioprocess = function(audioProcessingEvent) {
+                     var outputBuffer = audioProcessingEvent.outputBuffer;
+                     var leftChan  = outputBuffer.getChannelData(0);
+                     var rightChan = outputBuffer.getChannelData(1);
+                     updateGain();
+                     if (!m_isRunning) {
+                         for (var iSamp=0; iSamp<this.bufferSize; iSamp += 1) {
+                             m_samplesCopy.left[iSamp] = leftChan[iSamp] = 0;
+                             m_samplesCopy.right[iSamp] = rightChan[iSamp] = 0;
+                         }
+                     } else {
+                         for (var iSamp=0; iSamp<this.bufferSize; iSamp += 1) {
+                             var samples = m_sampleGen(m_elapsedTime);
+                             m_samplesCopy.left[iSamp] = leftChan[iSamp] = samples[0];
+                             m_samplesCopy.right[iSamp] = rightChan[iSamp] = samples[1];
+                             m_elapsedTime += secondsPerSample;
+                         }
+                     }
+                 };
+                 m_scriptNode.connect(m_gainNode);
+             }
+             init();
+             return {
+                 start: function() {
+                     var oldFunc = m_sampleGen;
+                     try {
+                         m_updateCode();
+                     } catch(e) {
+                         alert(e.name + "\n" + e.message);
+                         m_sampleGen = oldFunc;
+                     }
+                     m_elapsedTime = 0.0;
+                     m_isRunning = true;
+                 },
+                 stop: function() { m_isRunning = false; },
+                 isRunning: function() { return m_isRunning; },
+                 getBufferSize: function() { return m_scriptNode.bufferSize; },
+                 getSamples: function() { return m_samplesCopy; },
+                 getAnalysers: function() { return m_analyserNodes; },
+             };
+         }();
+        </script>
+        <input type="button" value="Run (ctrl-Enter)" id="runButton"/>
+        <input type="button" value="Stop (ctrl-Space)" id="stopButton"/>
+        <label for="gainSlider">Gain:</label>
+        <input id="gainSlider" type="range" min="0" max="100" value="50"
+               onmouseup="localStorage.gain=this.value;"
+               oninput="gainSliderOutput.value = this.value;"/>
+        <output for="gainSlider" id="gainSliderOutput"
+                style="border:1px solid black; padding: 2px;">50</output>
+        <script>
+         "use strict";
+         document.querySelector("#gainSlider").value = localStorage.getItem("gain") || 50;
+         document.querySelector("#gainSliderOutput").value = document.querySelector("#gainSlider").value;
+         document.querySelector("#runButton").addEventListener("click", waver.start, false);
+         document.querySelector("#stopButton").addEventListener("click", waver.stop, false);
+        </script>
+        <H2>Help</H2>
+        <P>Use the editor to write Javascript code to generate an audio signal in real time.</P>
+        <P>The following built-in variables are available:
+            <UL>
+                <LI><TT><B>time</B></TT> [input] -- elapsed time in seconds</LI>
+                <LI><TT><B>left</B></TT> [output] -- store the sample value for the left channel here. Range is [-1.0...1.0].</LI>
+                <LI><TT><B>right</B></TT> [output] -- store the sample value for the right channel here. Range is [-1.0...1.0].</LI>
+            </UL>
+            For the sake of convenience, the following Math functions are defined at the global scope (no "Math." prefix required:
+            <TT><B>PI, abs(x), sign(x), sqrt(x), cbrt(x), min(x), max(x), clamp(x,minX,maxX), ceil(x), floor(x), trunc(x), fract(x), log(x), log10(x),
+                exp(x), pow(x), sin(x), cos(x), tan(x), asin(x), acos(x), atan(x), atan2(x,y)</B></TT></P>
+
+        <H2>Tutorial:</H2>
+        
+        <P><B>Basic Wave Generation</B><BR>Let's start with the simplest example possible: a sine wave:</P>
+        <div translate="no" class="code">var sample = sin(time);
 left = sample;
 right = sample;</div>
-		
-		<p>The resulting wave undergoes a single cycle once every 2*PI
-			(=6.28...) seconds. This gives a frequency of 1/6.28 = 0.159
-			Hz, which is well beyond the limits of human hearing (roughly
-			20Hz through 20,000 Hz). We'll need a much higher frequency if
-			we want to hear anything. First, let's generate a 1Hz wave, by
-			multiplying the time by 2*PI:</p>
-		
-		<div translate="no" class="code">var sample = sin(2*PI*time);
+        
+        <p>The resulting wave undergoes a single cycle once every 2*PI
+            (=6.28...) seconds. This gives a frequency of 1/6.28 = 0.159
+            Hz, which is well beyond the limits of human hearing (roughly
+            20Hz through 20,000 Hz). We'll need a much higher frequency if
+            we want to hear anything. First, let's generate a 1Hz wave, by
+            multiplying the time by 2*PI:</p>
+        
+        <div translate="no" class="code">var sample = sin(2*PI*time);
 left = sample;
 right = sample;</div>
 
-		<p>Next, we declare a <tt>freq</tt> variable to store the desired
-			wave frequency. We'll start at 1.0 for now:</p>
+        <p>Next, we declare a <tt>freq</tt> variable to store the desired
+            wave frequency. We'll start at 1.0 for now:</p>
 
-		<div translate="no" class="code">var freqHz = 1.0;
+        <div translate="no" class="code">var freqHz = 1.0;
 var sample = sin(freqHz * 2*PI*time);
 left = sample;
 right = sample;</div>
 
-		<p>This is still inaudible, but if we increase the value of
-			freqHz, we should eventually start to hear a low bass hum
-			at around 20Hz. Try it! For reference, the pitch most
-			orchestras tune to (A above middle C) is 440Hz.</p>
-		
-		<div translate="no" class="code">var freqHz = 20.0;
+        <p>This is still inaudible, but if we increase the value of
+            freqHz, we should eventually start to hear a low bass hum
+            at around 20Hz. Try it! For reference, the pitch most
+            orchestras tune to (A above middle C) is 440Hz.</p>
+        
+        <div translate="no" class="code">var freqHz = 20.0;
 var sample = sin(freqHz * 2*PI*time);
 left = sample;
 right = sample;</div>
-			
-		<p><B>Adding Rhythm</B><BR>We can add a decay to the sound by scaling the sample
-			values by <tt>exp(-x)</tt>. At x=0, <tt>exp(0)</tt> returns
-			1.0; as x gets larger (and -x gets closer to -infinity),
-			<tt>exp(-x)</tt> approaches zero. By scaling the input to
-			<tt>exp()</tt>, we get a longer or shorter decay.</p>
+        
+        <p><B>Adding Rhythm</B><BR>We can add a decay to the sound by scaling the sample
+            values by <tt>exp(-x)</tt>. At x=0, <tt>exp(0)</tt> returns
+            1.0; as x gets larger (and -x gets closer to -infinity),
+            <tt>exp(-x)</tt> approaches zero. By scaling the input to
+            <tt>exp()</tt>, we get a longer or shorter decay.</p>
 
-		<div translate="no" class="code">var freqHz = 440.0; // higher value -> higher pitch
+        <div translate="no" class="code">var freqHz = 440.0; // higher value -> higher pitch
 var decaySpeed = 4.0; // higher value -> faster decay (shorter notes)
 var sample = sin(freqHz * 2*PI*time) * exp(-decaySpeed*time);
 left = sample;
 right = sample;</div>
 
-		<p>Now let's add some rhythm to the sound. Instead of passing
-			<tt>time</tt> directory to <tt>exp()</tt>, we use <tt>fract()</tt> to
-			only pass the fractional part of <tt>time</tt>. This
-			forces the decay factor to reset to 1.0 every second. We
-			can go one step further and define a scale factor for the <tt>fract()</tt> term
-			so that we can express the tempo in terms of a more
-			familiar unit like beats per minute (bpm).</p>
+        <p>Now let's add some rhythm to the sound. Instead of passing
+            <tt>time</tt> directory to <tt>exp()</tt>, we use <tt>fract()</tt> to
+            only pass the fractional part of <tt>time</tt>. This
+            forces the decay factor to reset to 1.0 every second. We
+            can go one step further and define a scale factor for the <tt>fract()</tt> term
+            so that we can express the tempo in terms of a more
+            familiar unit like beats per minute (bpm).</p>
 
-		<div translate="no" class="code">var freqHz = 440.0; // higher value -> higher pitch
+        <div translate="no" class="code">var freqHz = 440.0; // higher value -> higher pitch
 var decaySpeed = 4.0; // higher value -> faster decay (shorter notes)
 var tempoBpm = 60; // higher value -> faster rhythm
 var sample = sin(freqHz * 2*PI*time) * exp(-decaySpeed*fract(tempoBpm/60 * time));
 left = sample;
 right = sample;</div>
 
-		<p><B>Advanced Wave Generation</B><BR>Sine waves are boring. Let's generate a more interesting
-			waveform, like a square wave. First let's pull the wave
-			generator into its own function.</p>
-		<div translate="no" class="code">var freqHz = 440.0; // higher value -> higher pitch
+        <p><B>Advanced Wave Generation</B><BR>Sine waves are boring. Let's generate a more interesting
+            waveform, like a square wave. First let's pull the wave
+            generator into its own function.</p>
+        <div translate="no" class="code">var freqHz = 440.0; // higher value -> higher pitch
 var decaySpeed = 4.0; // higher value -> faster decay (shorter notes)
 var tempoBpm = 60; // higher value -> faster rhythm
 function waveSine(freq,t) { return sin(freq * 2*PI*t); }
@@ -281,40 +326,40 @@ var sample = waveSine(freqHz,time) * exp(-decaySpeed*fract(tempoBpm/60 * time));
 left = sample;
 right = sample;</div>
 
-		<p>We can build a square wave a few different ways. The first
-			uses <A HREF="http://en.wikipedia.org/wiki/Fourier_analysis" >Fourier analysis</A> to
-			break a square wave into an infinite series of sine waves
-			(for more details, see the Wikipedia entry for <A HREF="http://en.wikipedia.org/wiki/Square_wave#Examining_the_square_wave">square waves</A>).
-			The more terms we add, the more closely we approximate a
-			true square wave. Try slowly increasing the value of
-			<tt>numHarmonics</tt> below, or jump straight to around
-			50 for a pretty good approximation of a square wave.</p>
-		
-		<div translate="no" class="code">var freqHz = 440.0; // higher value -> higher pitch
+        <p>We can build a square wave a few different ways. The first
+            uses <A HREF="http://en.wikipedia.org/wiki/Fourier_analysis" >Fourier analysis</A> to
+            break a square wave into an infinite series of sine waves
+            (for more details, see the Wikipedia entry for <A HREF="http://en.wikipedia.org/wiki/Square_wave#Examining_the_square_wave">square waves</A>).
+            The more terms we add, the more closely we approximate a
+            true square wave. Try slowly increasing the value of
+            <tt>numHarmonics</tt> below, or jump straight to around
+            50 for a pretty good approximation of a square wave.</p>
+        
+        <div translate="no" class="code">var freqHz = 440.0; // higher value -> higher pitch
 var decaySpeed = 4.0; // higher value -> faster decay (shorter notes)
 var tempoBpm = 60; // higher value -> faster rhythm
 function waveSine(freq,t) { return sin(freq * 2*PI*t); }
 function waveSquare(freq,t) {
-	var sample=0;
-	var numHarmonics=1; // higher values -> better approximation
-	var iHarm;
-	for(iHarm=0; iHarm&ltnumHarmonics; iHarm += 1) {
-		sample += sin(freq * (2*iHarm+1)*2*PI*t) / (2*iHarm+1);
-	}
-	sample *= 4/PI;
-	return sample;
+    var sample=0;
+    var numHarmonics=1; // higher values -> better approximation
+    var iHarm;
+    for(iHarm=0; iHarm&ltnumHarmonics; iHarm += 1) {
+        sample += sin(freq * (2*iHarm+1)*2*PI*t) / (2*iHarm+1);
+    }
+    sample *= 4/PI;
+    return sample;
 }
 var sample = waveSquare(freqHz,time) * exp(-decaySpeed*fract(tempoBpm/60 * time));
 left = sample;
 right = sample;</div>
-			
-		<p>...or we could just take the high road, and observe
-			that it's quicker and easier to generate a perfect square
-			wave by simply taking the sign (+1 or -1) of a regular
-			sine wave. But the Fourier approach is still worth knowing
-			about!</p>
+        
+        <p>...or we could just take the high road, and observe
+            that it's quicker and easier to generate a perfect square
+            wave by simply taking the sign (+1 or -1) of a regular
+            sine wave. But the Fourier approach is still worth knowing
+            about!</p>
 
-		<div translate="no" class="code">var freqHz = 440.0; // higher value -> higher pitch
+        <div translate="no" class="code">var freqHz = 440.0; // higher value -> higher pitch
 var decaySpeed = 4.0; // higher value -> faster decay (shorter notes)
 var tempoBpm = 60; // higher value -> faster rhythm
 function waveSine(freq,t) { return sin(freq * 2*PI*t); }
@@ -323,137 +368,178 @@ var sample = waveSquare(freqHz,time) * exp(-decaySpeed*fract(tempoBpm/60 * time)
 left = sample;
 right = sample;</div>
 
-		<P><B>Phase Modulation</B><BR>Another way we can change the timbre of our waveform is to use a technique called <A HREF="http://en.wikipedia.org/Phase_modulation">phase modulation</A>. We start by adding a second sine wave as an offset to the parameter of the main sine wave, with a scale factor called the "modulation index". Try increasing the modulation index to hear the difference in the resulting tone.</P>
+        <P><B>Phase Modulation</B><BR>Another way we can change the timbre of our waveform is to use a technique called <A HREF="http://en.wikipedia.org/Phase_modulation">phase modulation</A>. We start by adding a second sine wave as an offset to the parameter of the main sine wave, with a scale factor called the "modulation index". Try increasing the modulation index to hear the difference in the resulting tone.</P>
 
-		<div translate="no" class="code">var freqHz = 440.0; // higher value -> higher pitch
+        <div translate="no" class="code">var freqHz = 440.0; // higher value -> higher pitch
 var decaySpeed = 4.0; // higher value -> faster decay (shorter notes)
 var tempoBpm = 60; // higher value -> faster rhythm
 var modulationIndex = 1.0;
 var sample = sin(freqHz * 2*PI*time + modulationIndex*sin(freqHz * 2*PI*time))
-	* exp(-decaySpeed*fract(tempoBpm/60 * time));
+* exp(-decaySpeed*fract(tempoBpm/60 * time));
 left = sample;
 right = sample;</div>
 
-		<P>...and once you have a modulation index, the obvious next step is to modulate it (with yet ANOTHER sine wave). As usual, try playing with the constants to see what effect they have on the output.</P>
+        <P>...and once you have a modulation index, the obvious next step is to modulate it (with yet ANOTHER sine wave). As usual, try playing with the constants to see what effect they have on the output.</P>
 
-		<div translate="no" class="code">var freqHz = 220.0; // higher value -> higher pitch
+        <div translate="no" class="code">var freqHz = 220.0; // higher value -> higher pitch
 var decaySpeed = 4.0; // higher value -> faster decay (shorter notes)
 var tempoBpm = 60; // higher value -> faster rhythm
 var modulationIndex = 10.0 + 15.0*sin(3.0*time);
 var sample = sin(freqHz * 2*PI*time + modulationIndex*sin(freqHz * 2*PI*time))
-	* exp(-decaySpeed*fract(tempoBpm/60 * time));
+* exp(-decaySpeed*fract(tempoBpm/60 * time));
 left = sample;
 right = sample;</div>
 
 
-		
-		<H2>Examples:</H2>
-		<div translate="no" class="code">var modulationIndex = 10*sin(time);
+        
+        <H2>Examples:</H2>
+        <div translate="no" class="code">var modulationIndex = 10*sin(time);
 var freqHz = 220;
 var drumDistortion = 1000.0;
 var phaseOffset = modulationIndex * sin(freqHz * 2*PI*time);
 var sample = sin(freqHz * 2*PI*time + phaseOffset) * exp(-4.0*fract(4*time));
-
 var kick = clamp( drumDistortion*sin(  100*exp( -10*fract(2.0*time      ))), -1, 1);
 var hat  = clamp( drumDistortion*sin( 1000*exp(-100*fract(2.0*time + 0.5))), -1, 1);
 sample += kick;
 sample += hat;
-
 left = sample;
 right = sample;</div>
-		
-		<H2>TODO:</H2>
-		<UL>
-			<LI>UI controls for:<UL>
-				<LI>Audio buffer size</LI>
-			</UL></LI>
-			<LI>Error reporting (syntax error, failure to set left/right, etc.)</LI>
-		</UL>
-		
-		<!-- Waveform display -->
-		<script>
-		var waveDisplay = function() {
-			"use strict";
-			var ctx;
-			var enableMotionBlur = true;
-			function init() {
-				var canvas = document.querySelector("#waveformCanvas");
-				ctx = canvas.getContext("2d");
-				ctx.canvas.width = window.innerWidth * 0.9;
-				ctx.save();
-				ctx.fillStyle = "black";
-				ctx.fillRect(0,0,canvas.width,canvas.height);
-				ctx.restore();
-				render();
-			}
-			function onWindowResize(event) {
-				var canvasDiv = document.getElementById("waveformCanvasDiv");
-				if (canvasDiv) {
-					ctx.canvas.width = canvasDiv.offsetWidth;
-				}
-			}
-			window.addEventListener('resize', onWindowResize, false);
-			function render(timeStamp) {
-				ctx.save();
-				// clear
-				ctx.fillStyle = enableMotionBlur ?
-								"rgba(0,0,0, 0.15)" :
-								"rgb(0,0,0)"
-				ctx.fillRect(0,0, ctx.canvas.width,ctx.canvas.height);
-				// Zero axes
-				var waveScale = ctx.canvas.height * 0.25;
-				var zeroYL = waveScale * 1;
-				var zeroYR = waveScale * 3;
-				ctx.beginPath();
-				ctx.moveTo(0,                zeroYL);
-				ctx.lineTo(ctx.canvas.width, zeroYL);
-				ctx.moveTo(0,                zeroYR);
-				ctx.lineTo(ctx.canvas.width, zeroYR);
-				ctx.strokeStyle = "rgb(64,64,192)";
-				ctx.stroke();
-				// waves
-				if (waver.isRunning()) {
-					var iSamp;
-					var samples = waver.getSamples();
-					var dx = ctx.canvas.width / (samples.left.length-1);
-					// left channel
-					ctx.beginPath();
-					ctx.moveTo(dx*0, zeroYL + waveScale*samples.left[0]);
-					for(iSamp=1; iSamp<samples.left.length; iSamp += 1) {
-						ctx.lineTo(dx*iSamp, zeroYL + waveScale*samples.left[iSamp]);
-					}
-					ctx.strokeStyle = 'yellow';
-					ctx.stroke();
-					// right channel
-					ctx.beginPath();
-					ctx.moveTo(dx*0, zeroYR + waveScale*samples.right[0]);
-					for(iSamp=1; iSamp<samples.right.length; iSamp += 1) {
-						ctx.lineTo(dx*iSamp, zeroYR + waveScale*samples.right[iSamp]);
-					}
-					ctx.strokeStyle = 'yellow';
-					ctx.stroke();
-				} else {
-					ctx.beginPath();
-					ctx.moveTo(0,                zeroYL);
-					ctx.lineTo(ctx.canvas.width, zeroYL);
-					ctx.moveTo(0,                zeroYR);
-					ctx.lineTo(ctx.canvas.width, zeroYR);
-					ctx.strokeStyle = "yellow";
-					ctx.stroke();
-				}
-					
-				ctx.restore();
-				requestAnimationFrame(render);
-			}
-			function makeDoubleDelegate(f1,f2) {
-				return function(){
-					if (f1) f1();
-					if (f2) f2();
-				}
-			}
-			window.onload = makeDoubleDelegate(window.onload, init);
-		}();
-		</script>
+        
+        <H2>TODO:</H2>
+        <UL>
+            <LI>UI controls for:<UL>
+                <LI>Audio buffer size</LI>
+                <LI>Save current program to LocalStorage (with name)</LI>
+                <LI>Load program from LocalStorage (by name)</LI>
+                <LI>Delete program from LocalStorage (by name)</LI>
+            </UL></LI>
+            <LI>Move keyboard shortcuts from editor to window, so
+                they're active without editor focus.</LI>
+            <LI>Move editor and wave display into a frame?</LI>
+            <LI>Error reporting (syntax error, failure to set
+                left/right, etc.)</LI>
+        </UL>
+        
+        <!-- Waveform display -->
+        <script>
+         var waveDisplay = function() {
+             "use strict";
+             var enableMotionBlur = true;
+             function init() {
+                 var canvas = document.querySelector("#spectrumCanvas");
+                 var ctx = canvas.getContext("2d");
+                 ctx.canvas.width = document.querySelector("#waveformCanvasDiv").offsetWidth * 0.49;
+                 ctx.save();
+                 ctx.fillStyle = "red";
+                 ctx.fillRect(0,0,canvas.width,canvas.height);
+                 ctx.restore();
 
-	</body>
+                 canvas = document.querySelector("#waveformCanvas");
+                 ctx = canvas.getContext("2d");
+                 ctx.canvas.width = document.querySelector("#waveformCanvasDiv").offsetWidth * 0.49;
+                 ctx.save();
+                 ctx.fillStyle = "black";
+                 ctx.fillRect(0,0,canvas.width,canvas.height);
+                 ctx.restore();
+
+                 render();
+             }
+             function onWindowResize(event) {
+                 var canvasDiv = document.querySelector("#waveformCanvasDiv");
+                 if (canvasDiv) {
+                     document.querySelector("#waveformCanvas").width = canvasDiv.offsetWidth * 0.49;
+                     document.querySelector("#spectrumCanvas").width = canvasDiv.offsetWidth * 0.49;
+                 }
+             }
+             window.addEventListener('resize', onWindowResize, false);
+             function render(timeStamp) {
+                 var analysers = waver.getAnalysers();
+                 // Waveform display
+                 var ctx = document.querySelector("#waveformCanvas").getContext("2d");
+                 ctx.save();
+                 // clear
+                 ctx.fillStyle = enableMotionBlur ?
+                                 "rgba(0,0,0, 0.15)" :
+                                 "rgb(0,0,0)";
+                 ctx.fillRect(0,0, ctx.canvas.width,ctx.canvas.height);
+                 // Zero axes
+                 var waveScale = ctx.canvas.height * 0.25;
+                 var zeroYL = waveScale * 1;
+                 var zeroYR = waveScale * 3;
+                 ctx.beginPath();
+                 ctx.moveTo(0,                zeroYL);
+                 ctx.lineTo(ctx.canvas.width, zeroYL);
+                 ctx.moveTo(0,                zeroYR);
+                 ctx.lineTo(ctx.canvas.width, zeroYR);
+                 ctx.strokeStyle = "rgb(64,64,192)";
+                 ctx.stroke();
+                 // waves
+                 if (waver.isRunning()) {
+                     var samples = new Float32Array(analysers.left.frequencyBinCount);
+                     var iSamp;
+                     var dx = ctx.canvas.width / (samples.length-1);
+                     // left channel
+                     analysers.left.getFloatTimeDomainData(samples);
+                     ctx.beginPath();
+                     ctx.moveTo(dx*0, zeroYL + waveScale*samples[0]);
+                     for(iSamp=1; iSamp<samples.length; iSamp += 1) {
+                         ctx.lineTo(dx*iSamp, zeroYL + waveScale*samples[iSamp]);
+                     }
+                     ctx.strokeStyle = 'yellow';
+                     ctx.stroke();
+                     // right channel
+                     analysers.right.getFloatTimeDomainData(samples);
+                     ctx.beginPath();
+                     ctx.moveTo(dx*0, zeroYR + waveScale*samples[0]);
+                     for(iSamp=1; iSamp<samples.length; iSamp += 1) {
+                         ctx.lineTo(dx*iSamp, zeroYR + waveScale*samples[iSamp]);
+                     }
+                     ctx.strokeStyle = 'yellow';
+                     ctx.stroke();
+                 } else {
+                     ctx.beginPath();
+                     ctx.moveTo(0,                zeroYL);
+                     ctx.lineTo(ctx.canvas.width, zeroYL);
+                     ctx.moveTo(0,                zeroYR);
+                     ctx.lineTo(ctx.canvas.width, zeroYR);
+                     ctx.strokeStyle = "yellow";
+                     ctx.stroke();
+                 }
+                 ctx.restore();
+
+                 // Spectrum display
+                 ctx = document.querySelector("#spectrumCanvas").getContext("2d");
+                 ctx.save();
+                 // clear
+                 ctx.fillStyle = enableMotionBlur ?
+                                 "rgba(0,0,0, 0.15)" :
+                                 "rgb(0,0,0)";
+                 ctx.fillRect(0,0, ctx.canvas.width,ctx.canvas.height);
+                 if (waver.isRunning()) {
+                     var freqs = new Uint8Array(analysers.freq.frequencyBinCount);
+                     analysers.freq.getByteFrequencyData(freqs);
+                     var iFreq;
+                     var dx = ctx.canvas.width / (freqs.length-1);
+                     for(iFreq=0; iFreq<freqs.length; iFreq += 1) {
+                         var f = freqs[iFreq]/255;
+                         var height = f*f * ctx.canvas.height;
+                         var hue = iFreq * 360 / analysers.freq.frequencyBinCount;
+                         ctx.fillStyle = 'hsl(' + hue + ', 100%, 50%)';
+                         ctx.fillRect(iFreq*dx, ctx.canvas.height-height, dx, height);
+                     }
+                 }
+                 ctx.restore();
+                 requestAnimationFrame(render);
+             }
+             function makeDoubleDelegate(f1,f2) {
+                 return function(){
+                     if (f1) f1();
+                     if (f2) f2();
+                 }
+             }
+             window.onload = makeDoubleDelegate(window.onload, init);
+         }();
+        </script>
+
+    </body>
 </html>
