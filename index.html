@@ -110,15 +110,46 @@ right = sample;</pre>
          var PI = Math.PI;
          var waver = function() {
              "use strict";
-             var m_elapsedTime, m_scriptNode, m_isRunning, m_sampleGen, m_audioCtx, m_updateCode;
+             var m_elapsedTime, m_scriptNode, m_gainNode, m_analyserNodes, m_isRunning, m_sampleGen, m_audioCtx, m_updateCode;
              var m_samplesCopy;
+             function updateGain() {
+                 var gainSlider = document.querySelector("#gainSlider");
+                 if (gainSlider) {
+                     var frac = parseInt(gainSlider.value) / parseInt(gainSlider.max);
+                     // x^2 gain sounds better than linear
+                     m_gainNode.gain.value = frac*frac;
+                 }
+             }
              function init() {
                  m_audioCtx = new AudioContext();
+                 m_analyserNodes = {
+                     left:  m_audioCtx.createAnalyser(),
+                     right: m_audioCtx.createAnalyser(),
+                 };
+                 m_analyserNodes.left.smoothingTimeConstant = m_analyserNodes.right.smoothingTimeConstant =  0.8;
+                 m_analyserNodes.left.minDecibels           = m_analyserNodes.right.minDecibels           = -140;
+                 m_analyserNodes.left.maxDecibels           = m_analyserNodes.right.maxDecibels           =    0;
+                 m_analyserNodes.left.fftSize               = m_analyserNodes.right.fftSize               = 2048;
+
+                 var splitterNode = m_audioCtx.createChannelSplitter();
+                 splitterNode.connect(m_analyserNodes.left, 0);
+                 splitterNode.connect(m_analyserNodes.right, 1);
+                 
                  var sampleBufferSize = 1024;
                  var inputChannelCount = 0;
                  var outputChannelCount = 2;
                  m_scriptNode = m_audioCtx.createScriptProcessor(sampleBufferSize,
                                                                  inputChannelCount, outputChannelCount);
+
+                 var compressorNode = m_audioCtx.createDynamicsCompressor();
+                 compressorNode.connect(splitterNode);
+                 compressorNode.threshold.value = -24;
+                 compressorNode.connect(m_analyserNodes.freq);
+                 
+                 m_gainNode = m_audioCtx.createGain();
+                 m_gainNode.connect(compressorNode);
+                 updateGain();
+                 
                  m_samplesCopy = {
                      left: new Float32Array(sampleBufferSize),
                      right: new Float32Array(sampleBufferSize)
@@ -143,26 +174,26 @@ right = sample;</pre>
                      var outputBuffer = audioProcessingEvent.outputBuffer;
                      var leftChan  = outputBuffer.getChannelData(0);
                      var rightChan = outputBuffer.getChannelData(1);
+                     updateGain();
                      if (!m_isRunning) {
                          for (var iSamp=0; iSamp<this.bufferSize; iSamp += 1) {
                              m_samplesCopy.left[iSamp] = leftChan[iSamp] = 0;
                              m_samplesCopy.right[iSamp] = rightChan[iSamp] = 0;
                          }
-                         return;
-                     }
-                     var gain = document.getElementById("gainSlider").value * 0.01;
-                     for (var iSamp=0; iSamp<this.bufferSize; iSamp += 1) {
-                         var samples = m_sampleGen(m_elapsedTime);
-                         m_samplesCopy.left[iSamp] = leftChan[iSamp] = samples[0] * gain;
-                         m_samplesCopy.right[iSamp] = rightChan[iSamp] = samples[1] * gain;
-                         m_elapsedTime += secondsPerSample;
+                     } else {
+                         for (var iSamp=0; iSamp<this.bufferSize; iSamp += 1) {
+                             var samples = m_sampleGen(m_elapsedTime);
+                             m_samplesCopy.left[iSamp] = leftChan[iSamp] = samples[0];
+                             m_samplesCopy.right[iSamp] = rightChan[iSamp] = samples[1];
+                             m_elapsedTime += secondsPerSample;
+                         }
                      }
                  };
-                 m_scriptNode.connect(m_audioCtx.destination);
+                 m_scriptNode.connect(m_gainNode);
              }
              init();
              return {
-                 "start": function() {
+                 start: function() {
                      var oldFunc = m_sampleGen;
                      try {
                          m_updateCode();
@@ -173,10 +204,11 @@ right = sample;</pre>
                      m_elapsedTime = 0.0;
                      m_isRunning = true;
                  },
-                 "stop": function() { m_isRunning = false; },
-                 "isRunning": function() { return m_isRunning; },
-                 "getBufferSize": function() { return m_scriptNode.bufferSize; },
-                 "getSamples": function() { return m_samplesCopy; }
+                 stop: function() { m_isRunning = false; },
+                 isRunning: function() { return m_isRunning; },
+                 getBufferSize: function() { return m_scriptNode.bufferSize; },
+                 getSamples: function() { return m_samplesCopy; },
+                 getAnalysers: function() { return m_analyserNodes; },
              };
          }();
         </script>
@@ -387,18 +419,21 @@ right = sample;</pre>
                  render();
              }
              function onWindowResize(event) {
-                 var canvasDiv = document.getElementById("waveformCanvasDiv");
+                 var canvasDiv = document.querySelector("#waveformCanvasDiv");
                  if (canvasDiv) {
                      ctx.canvas.width = canvasDiv.offsetWidth;
                  }
              }
              window.addEventListener('resize', onWindowResize, false);
              function render(timeStamp) {
+                 var analysers = waver.getAnalysers();
+                 // Waveform display
+                 var ctx = document.querySelector("#waveformCanvas").getContext("2d");
                  ctx.save();
                  // clear
                  ctx.fillStyle = enableMotionBlur ?
                                  "rgba(0,0,0, 0.15)" :
-                                 "rgb(0,0,0)"
+                                 "rgb(0,0,0)";
                  ctx.fillRect(0,0, ctx.canvas.width,ctx.canvas.height);
                  // Zero axes
                  var waveScale = ctx.canvas.height * 0.25;
@@ -413,22 +448,24 @@ right = sample;</pre>
                  ctx.stroke();
                  // waves
                  if (waver.isRunning()) {
+                     var samples = new Float32Array(analysers.left.frequencyBinCount);
                      var iSamp;
-                     var samples = waver.getSamples();
-                     var dx = ctx.canvas.width / (samples.left.length-1);
+                     var dx = ctx.canvas.width / (samples.length-1);
                      // left channel
+                     analysers.left.getFloatTimeDomainData(samples);
                      ctx.beginPath();
-                     ctx.moveTo(dx*0, zeroYL + waveScale*samples.left[0]);
-                     for(iSamp=1; iSamp<samples.left.length; iSamp += 1) {
-                         ctx.lineTo(dx*iSamp, zeroYL + waveScale*samples.left[iSamp]);
+                     ctx.moveTo(dx*0, zeroYL + waveScale*samples[0]);
+                     for(iSamp=1; iSamp<samples.length; iSamp += 1) {
+                         ctx.lineTo(dx*iSamp, zeroYL + waveScale*samples[iSamp]);
                      }
                      ctx.strokeStyle = 'yellow';
                      ctx.stroke();
                      // right channel
+                     analysers.right.getFloatTimeDomainData(samples);
                      ctx.beginPath();
-                     ctx.moveTo(dx*0, zeroYR + waveScale*samples.right[0]);
-                     for(iSamp=1; iSamp<samples.right.length; iSamp += 1) {
-                         ctx.lineTo(dx*iSamp, zeroYR + waveScale*samples.right[iSamp]);
+                     ctx.moveTo(dx*0, zeroYR + waveScale*samples[0]);
+                     for(iSamp=1; iSamp<samples.length; iSamp += 1) {
+                         ctx.lineTo(dx*iSamp, zeroYR + waveScale*samples[iSamp]);
                      }
                      ctx.strokeStyle = 'yellow';
                      ctx.stroke();
