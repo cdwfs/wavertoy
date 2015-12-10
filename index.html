@@ -26,11 +26,15 @@
     </head>
     <body>
 
-        <!-- Waveform Display -->
+        <!-- Waveform/Spectrum Display -->
         <div id="waveformCanvasDiv">
             <canvas id="waveformCanvas" width="100" height="300"
                     style="border:1px solid black">
                 Waveform display is not supported by your browser.
+            </canvas>
+            <canvas id="spectrumCanvas" width="100" height="300"
+                    style="border:1px solid black">
+                Spectrum display is not supported by your browser.
             </canvas>
         </div>
         
@@ -125,11 +129,19 @@ right = sample;</pre>
                  m_analyserNodes = {
                      left:  m_audioCtx.createAnalyser(),
                      right: m_audioCtx.createAnalyser(),
+                     freq:  m_audioCtx.createAnalyser(),
                  };
+
                  m_analyserNodes.left.smoothingTimeConstant = m_analyserNodes.right.smoothingTimeConstant =  0.8;
                  m_analyserNodes.left.minDecibels           = m_analyserNodes.right.minDecibels           = -140;
                  m_analyserNodes.left.maxDecibels           = m_analyserNodes.right.maxDecibels           =    0;
                  m_analyserNodes.left.fftSize               = m_analyserNodes.right.fftSize               = 2048;
+
+                 m_analyserNodes.freq.smoothingTimeConstant =  0.6;
+                 m_analyserNodes.freq.minDecibels           = -140;
+                 m_analyserNodes.freq.maxDecibels           =    0;
+                 m_analyserNodes.freq.fftSize               =  128;
+                 m_analyserNodes.freq.connect(m_audioCtx.destination);
 
                  var splitterNode = m_audioCtx.createChannelSplitter();
                  splitterNode.connect(m_analyserNodes.left, 0);
@@ -406,22 +418,31 @@ right = sample;</pre>
         <script>
          var waveDisplay = function() {
              "use strict";
-             var ctx;
              var enableMotionBlur = true;
              function init() {
-                 var canvas = document.querySelector("#waveformCanvas");
+                 var canvas = document.querySelector("#spectrumCanvas");
+                 var ctx = canvas.getContext("2d");
+                 ctx.canvas.width = document.querySelector("#waveformCanvasDiv").offsetWidth * 0.49;
+                 ctx.save();
+                 ctx.fillStyle = "red";
+                 ctx.fillRect(0,0,canvas.width,canvas.height);
+                 ctx.restore();
+
+                 canvas = document.querySelector("#waveformCanvas");
                  ctx = canvas.getContext("2d");
-                 ctx.canvas.width = window.innerWidth * 0.9;
+                 ctx.canvas.width = document.querySelector("#waveformCanvasDiv").offsetWidth * 0.49;
                  ctx.save();
                  ctx.fillStyle = "black";
                  ctx.fillRect(0,0,canvas.width,canvas.height);
                  ctx.restore();
+
                  render();
              }
              function onWindowResize(event) {
                  var canvasDiv = document.querySelector("#waveformCanvasDiv");
                  if (canvasDiv) {
-                     ctx.canvas.width = canvasDiv.offsetWidth;
+                     document.querySelector("#waveformCanvas").width = canvasDiv.offsetWidth * 0.49;
+                     document.querySelector("#spectrumCanvas").width = canvasDiv.offsetWidth * 0.49;
                  }
              }
              window.addEventListener('resize', onWindowResize, false);
@@ -478,7 +499,29 @@ right = sample;</pre>
                      ctx.strokeStyle = "yellow";
                      ctx.stroke();
                  }
-                 
+                 ctx.restore();
+
+                 // Spectrum display
+                 ctx = document.querySelector("#spectrumCanvas").getContext("2d");
+                 ctx.save();
+                 // clear
+                 ctx.fillStyle = enableMotionBlur ?
+                                 "rgba(0,0,0, 0.15)" :
+                                 "rgb(0,0,0)";
+                 ctx.fillRect(0,0, ctx.canvas.width,ctx.canvas.height);
+                 if (waver.isRunning()) {
+                     var freqs = new Uint8Array(analysers.freq.frequencyBinCount);
+                     analysers.freq.getByteFrequencyData(freqs);
+                     var iFreq;
+                     var dx = ctx.canvas.width / (freqs.length-1);
+                     for(iFreq=0; iFreq<freqs.length; iFreq += 1) {
+                         var f = freqs[iFreq]/255;
+                         var height = f*f * ctx.canvas.height;
+                         var hue = iFreq * 360 / analysers.freq.frequencyBinCount;
+                         ctx.fillStyle = 'hsl(' + hue + ', 100%, 50%)';
+                         ctx.fillRect(iFreq*dx, ctx.canvas.height-height, dx, height);
+                     }
+                 }
                  ctx.restore();
                  requestAnimationFrame(render);
              }
