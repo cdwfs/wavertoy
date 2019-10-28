@@ -207,6 +207,7 @@ right = sample;</pre>
              init();
              return {
                  start: function() {
+                     m_audioCtx.resume(); // thx chrome! https://goo.gl/7K7WLu
                      var oldFunc = m_sampleGen;
                      try {
                          m_updateCode();
